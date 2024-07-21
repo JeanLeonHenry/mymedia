@@ -4,34 +4,25 @@ from typing import Optional
 from config import DB_PATH
 
 
-class DBHandler:
+class DataBaseHandler:
     def __init__(self) -> None:
-        self.con = sqlite3.connect(DB_PATH)
+        self.connection = sqlite3.connect(DB_PATH)
         # If no table is found, create it
-        cur = self.con.cursor()
+        cur = self.connection.cursor()
         res = cur.execute("SELECT name FROM sqlite_master")
         if len(res.fetchall()) == 0:
             cur.execute(
-                "CREATE TABLE media(id, media_type, title, year, overview, director)"
+                "CREATE TABLE media(id, media_type, title, year, overview, director, poster)"
             )
-            self.con.commit()
+            self.connection.commit()
 
     def push(self, data: dict):
-        cur = self.con.cursor()
+        cur = self.connection.cursor()
         cur.execute(
-            "INSERT INTO media VALUES(:id, :media_type, :title, :year, :overview, :director)",
+            "INSERT INTO media VALUES(:id, :media_type, :title, :year, :overview, :director, :poster)",
             data,
         )
-        self.con.commit()
-
-    def list(self, limit: int = -1):
-        cur = self.con.cursor()
-        counter = 0
-        for row in cur.execute("SELECT * FROM media ORDER BY year"):
-            print(row)
-            counter += 1
-            if counter >= limit:
-                break
+        self.connection.commit()
 
     def search(
         self,
@@ -40,7 +31,7 @@ class DBHandler:
         year: Optional[int] = None,
     ) -> tuple:
         """Query the db by either an id or (title, year)."""
-        cur = self.con.cursor()
+        cur = self.connection.cursor()
         query = None
         data = None
         if id is not None:

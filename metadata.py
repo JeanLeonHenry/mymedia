@@ -10,7 +10,6 @@ from models import Media, MultiSearchResults, Person, MediaCredits
 from typing import Any, Optional, Tuple
 
 import requests
-from PIL import Image
 from pydantic import ValidationError
 
 from config import (
@@ -18,10 +17,8 @@ from config import (
     API_READ_TOKEN,
     API_URL,
     IMAGE_API_URL,
-    info_filename,
-    poster_filename,
 )
-from db import DBHandler
+from db import DataBaseHandler
 
 
 def search_api(query: Optional[str] = None, endpoint: str = "search/multi") -> Any:
@@ -74,33 +71,23 @@ def parse_response(results, title: str, year: int, tolerance: int) -> Media:
     return parsed_result
 
 
-def local_data_check(title: str, year: int) -> Tuple[bool, bool, bool]:
-    """Check if poster or info file are already present."""
-    if p := Path(poster_filename).is_file():
-        print("Poster file exists.")
-    if i := Path(info_filename).is_file():
-        print("Info file exists.")
-    if res := DBHandler().search(None, title, year):
-        print(f"Found {res} in db.")
-    return p, i, res != ()
-
-
-def download_poster(url: str) -> None:
+def get_poster(media: Media) -> Optional[bytes]:
     """Download a poster and save to disk."""
     print("Downloading poster.")
-    url = IMAGE_API_URL + url
+    if not media.poster_path:
+        print("Tried to get the poster of a media without one")
+        return
+    url = IMAGE_API_URL + media.poster_path
     response = requests.get(url, params={"api_key": API_KEY})
     response.raise_for_status()
-    img = Image.open(BytesIO(response.content))
-    img.save(poster_filename)
-    print("Wrote poster to disk.")
+    img = BytesIO(response.content).read()
+    return img
 
 
 def get_director(movie: Media) -> None:
     """Look up movie director and update provided Media."""
     if movie.media_type != "movie":
-        print("Tried to get a director of media that isn't a movie.")
-        return
+        raise ValueError("Tried to get a director of media that isn't a movie.")
     results = search_api(endpoint=f"movie/{movie.id}/credits")
     valid_response = MediaCredits.model_validate(results)
     directors = [crew.name for crew in valid_response.crew if crew.job == "Director"]
@@ -149,21 +136,24 @@ def parse_args() -> Tuple[str, int, argparse.Namespace]:
 
 if __name__ == "__main__":
     title, year, args = parse_args()
-    has_poster, has_info_file, _ = local_data_check(title, year)
+
+    database = DataBaseHandler()
+    if res := database.search(None, title, year):
+        id, media_type, title, year, overview, director, poster = res
+        answer = input(
+            f"Found {title} ({year}){' by '+director+' ' if director else ' '}in db.\nThe Movie DB page : https://www.themoviedb.org/{media_type}/{id}\nDo you want to replace local data? [y/N] "
+        )
+        if not answer.lower() == "y":
+            sys.exit("Quitting.")
+
     results = search_api(title)
     media = parse_response(results, title, year, args.tolerance)
     if media.media_type == "movie":
         get_director(media)
-    if not has_poster:
-        if media.poster_path:
-            download_poster(media.poster_path)
-        else:
-            print("Parsed result had no poster")
-    if not has_info_file:
-        with open(info_filename, "w") as f:
-            f.write(media.model_dump_json())
-        print("Wrote media info to local json file.")
-    dbh = DBHandler()
-    if not dbh.search(media.id):
-        dbh.push(media.model_dump(exclude={"date", "poster_path"}))
-        print("Wrote media info to db.")
+    poster = get_poster(media)
+    if not database.search(media.id):
+        data = media.model_dump(exclude={"date", "poster_path"})
+        data_no_poster = data.copy()
+        data["poster"] = poster
+        database.push(data)
+        print(f"Wrote {data_no_poster} media info to db (hiding poster).")

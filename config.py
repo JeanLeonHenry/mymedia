@@ -1,8 +1,6 @@
 import os
 from dotenv import dotenv_values
 
-poster_filename = "poster.png"
-info_filename = "media_info.json"
 API_URL = "https://api.themoviedb.org/3/"
 IMAGE_API_URL = "http://image.tmdb.org/t/p/w500"
 
