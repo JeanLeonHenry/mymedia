@@ -11,4 +11,3 @@ Put that file in ~/.config/mymedia.
 # TODO
 Ideas to expand on
  - make a gui
- - forget about json, switch completely to db
