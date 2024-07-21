@@ -10,5 +10,4 @@ For now running `metadata.py` will
 - `picker.py` outputs some tab-separated info for easy parsing. See `picker.fish` for an example of quick and dirty TUI.
 
 # TODO
-Ideas to expand on
- - make a gui
+ - make a proper GUI, that takes the poster image from the db.
