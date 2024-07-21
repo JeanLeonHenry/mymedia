@@ -6,7 +6,7 @@ For now running `metadata.py` will
 
 # Usage
 Make a `.env` file so that the variables in `config.py` resolve properly.
-Update config_path in `config.py` so that the config is loaded from `.env` file.
+Put that file ~/.config/mymedia.
 
 # TODO
 Ideas to expand on
