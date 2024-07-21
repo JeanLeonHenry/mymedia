@@ -7,6 +7,7 @@ For now running `metadata.py` will
 # Usage
 Make a `.env` file so that the variables in `config.py` resolve properly.
 Put that file in ~/.config/mymedia.
+`picker.py` outputs some tab-separated info for easy parsing. See `picker.fish` for an example of quick and dirty TUI.
 
 # TODO
 Ideas to expand on
