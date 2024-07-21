@@ -9,3 +9,4 @@ config = dotenv_values(config_path)
 API_KEY = config["API_KEY"]
 API_READ_TOKEN = config["API_READ_TOKEN"]
 DB_PATH = config["DB_PATH"]
+MEDIA_DIR = config["MEDIA_DIR"]

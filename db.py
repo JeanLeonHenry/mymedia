@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Optional
+from typing import List, Optional
 
 from config import DB_PATH
 
@@ -12,17 +12,26 @@ class DataBaseHandler:
         res = cur.execute("SELECT name FROM sqlite_master")
         if len(res.fetchall()) == 0:
             cur.execute(
-                "CREATE TABLE media(id, media_type, title, year, overview, director, poster)"
+                "CREATE TABLE media(id, media_type, title, year, overview, director, poster, path)"
             )
             self.connection.commit()
 
     def push(self, data: dict):
         cur = self.connection.cursor()
         cur.execute(
-            "INSERT INTO media VALUES(:id, :media_type, :title, :year, :overview, :director, :poster)",
+            "INSERT INTO media VALUES(:id, :media_type, :title, :year, :overview, :director, :poster, :path)",
             data,
         )
         self.connection.commit()
+
+    def get(self, size: int = -1, posters: bool = False) -> List[tuple]:
+        cur = self.connection.cursor()
+        query = f"SELECT id, media_type, title, year, overview, director{', poster' if posters else ''}, path FROM media ORDER BY title, year ASC"
+        if size != -1:
+            res = cur.execute(query).fetchmany(size)
+        else:
+            res = cur.execute(query).fetchall()
+        return res
 
     def search(
         self,
@@ -47,3 +56,8 @@ class DataBaseHandler:
         if res is None:
             return ()
         return res
+
+    def update_path(self, id: int, data: str) -> None:
+        cur = self.connection.cursor()
+        cur.execute("UPDATE media SET path=? WHERE media.id=?", (data, id))
+        self.connection.commit()

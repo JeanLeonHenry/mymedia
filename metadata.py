@@ -2,11 +2,11 @@
 """Download a movie/show info from themoviedb.org."""
 
 import argparse
+import os.path
 import sys
 from datetime import date
 from io import BytesIO
 from pathlib import Path
-from models import Media, MultiSearchResults, Person, MediaCredits
 from typing import Any, Optional, Tuple
 
 import requests
@@ -19,6 +19,7 @@ from config import (
     IMAGE_API_URL,
 )
 from db import DataBaseHandler
+from models import Media, MediaCredits, MultiSearchResults, Person
 
 
 def search_api(query: Optional[str] = None, endpoint: str = "search/multi") -> Any:
@@ -139,12 +140,13 @@ if __name__ == "__main__":
 
     database = DataBaseHandler()
     if res := database.search(None, title, year):
-        id, media_type, title, year, overview, director, poster = res
-        answer = input(
-            f"Found {title} ({year}){' by '+director+' ' if director else ' '}in db.\nThe Movie DB page : https://www.themoviedb.org/{media_type}/{id}\nDo you want to replace local data? [y/N] "
-        )
-        if not answer.lower() == "y":
-            sys.exit("Quitting.")
+        if len(res) == 7:
+            id, media_type, title, year, overview, director, poster = res
+            answer = input(
+                f"Found {title} ({year}){' by '+director+' ' if director else ' '}in db.\nThe Movie DB page : https://www.themoviedb.org/{media_type}/{id}\nDo you want to replace local data? [y/N] "
+            )
+            if not answer.lower() == "y":
+                sys.exit("Quitting.")
 
     results = search_api(title)
     media = parse_response(results, title, year, args.tolerance)
@@ -153,6 +155,7 @@ if __name__ == "__main__":
     poster = get_poster(media)
     if not database.search(media.id):
         data = media.model_dump(exclude={"date", "poster_path"})
+        data["path"] = os.path.join(os.getcwd())
         data_no_poster = data.copy()
         data["poster"] = poster
         database.push(data)
