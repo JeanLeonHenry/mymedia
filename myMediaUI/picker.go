@@ -66,13 +66,16 @@ func main() {
 		os.Exit(code)
 	}
 
-	// BUG: This preview fails with fish shell because of parentheses.
-	// should work fine with bash
-	previewCmd := "'echo {2};echo;echo {3}|fold -w ${FZF_PREVIEW_COLUMNS} -s'"
+	cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1"}
+	if shell := os.Getenv("SHELL"); path.Base(shell) != "fish" {
+		previewCmd := "'echo {2};echo;echo {3}|fold -w ${FZF_PREVIEW_COLUMNS} -s'"
+		cmdLineOptions = []string{"--delimiter=\\t", "--with-nth=1", "--preview=" + previewCmd}
+	}
+
 	// Build fzf.Options
 	options, err := fzf.ParseOptions(
 		true, // whether to load defaults ($FZF_DEFAULT_OPTS_FILE and $FZF_DEFAULT_OPTS)
-		[]string{"--delimiter=\\t", "--with-nth=1", "--preview=" + previewCmd},
+		cmdLineOptions,
 	)
 	if err != nil {
 		exit(fzf.ExitError, err)
