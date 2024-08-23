@@ -1,5 +1,6 @@
 import os
 from dotenv import dotenv_values
+import pprint
 
 API_URL = "https://api.themoviedb.org/3/"
 IMAGE_API_URL = "http://image.tmdb.org/t/p/w500"
@@ -10,3 +11,6 @@ API_KEY = config["API_KEY"]
 API_READ_TOKEN = config["API_READ_TOKEN"]
 DB_PATH = config["DB_PATH"]
 MEDIA_DIR = config["MEDIA_DIR"]
+
+if __name__ == "__main__":
+    pprint.pprint(config)
