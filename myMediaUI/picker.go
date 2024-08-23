@@ -17,7 +17,7 @@ import (
 
 func main() {
 	// Load config
-	dotenv.SetConfigFile(path.Join(os.Getenv("HOME"), ".config/mymedia/config.env"))
+	dotenv.SetConfigFile(path.Join(os.Getenv("HOME"), ".config/mymedia/.env"))
 	dbPath := dotenv.GetString("DB_PATH")
 	if dbPath == "" {
 		log.Fatal("db path is empty, check config file.")
@@ -67,10 +67,10 @@ func main() {
 	}
 
 	cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1"}
-	if shell := os.Getenv("SHELL"); path.Base(shell) != "fish" {
-		previewCmd := "'echo {2};echo;echo {3}|fold -w ${FZF_PREVIEW_COLUMNS} -s'"
-		cmdLineOptions = []string{"--delimiter=\\t", "--with-nth=1", "--preview=" + previewCmd}
-	}
+	// NOTE: depends on fold, kitty
+	// FIX: use poster image from db
+	previewCmd := "echo {2};echo;echo {3}|fold -w ${FZF_PREVIEW_COLUMNS} -s;COLS=$((LINES*2/3));kitten icat --clear --transfer-mode=memory --stdin=no --unicode-placeholder --place=${COLS}x${FZF_PREVIEW_LINES}@0x0 {-1}/poster.*"
+	cmdLineOptions = append(cmdLineOptions, "--preview="+previewCmd)
 
 	// Build fzf.Options
 	options, err := fzf.ParseOptions(
