@@ -73,7 +73,7 @@ def parse_response(results, title: str, year: int, tolerance: int) -> Media:
 
 
 def get_poster(media: Media) -> Optional[bytes]:
-    """Download a poster and save to disk."""
+    """Download a poster."""
     print("Downloading poster.")
     if not media.poster_path:
         print("Tried to get the poster of a media without one")
