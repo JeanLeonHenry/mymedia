@@ -1,29 +1,40 @@
-# Presentation
-
-## Metadata lookup
-For now, running `metadata.py` will
-- lookup the media on [themoviedb.org](themoviedb.org), given a title and a release year. That info can be
-    - provided with the `--info` option flag
-    - inferred from current directory name (must be in the format `TITLE (YEAR)`, parentheses included)
-- write data to a database, poster included
-
-## Media picker
-- `myMediaUI/myMediaUI` lets you choose the media you want to play and output the media directory to STDIN. Then use your favorite media player. For example, see `picker.sh`
-
 # Usage
+Build and query a media library.
+```
+Usage:
+  mymedia [command]
+
+Available Commands:
+  picker      TUI to query the database
+  poster      Reads poster from db and write it in cwd
+
+WIP:
+  scan        Scans the current folder for media folders and update database
+```
+## Picker
+Provides a fzf-based TUI to query the database.
+The output will be the path to the selected media directory.
+⚠️ external dependencies: fold, kitty
+
+## Poster
+the config (see below) must provide a path to `.db` file that is the result of the following sqlite statement
+```sql
+CREATE TABLE media(id, media_type, title, year, overview, director, poster, path)
+```
+the `poster` field holds the raw bytes for the poster image downloaded from TMDB.
+
+```
+Usage:
+  mymedia poster [flags]
+
+Flags:
+  -r, --replace        if replace is true, replace file if it exists
+  -t, --title string   media title, case insensitive, will be read from cwd name if missing
+```
+# Configuration
 - Make a `.env` file so that the variables in `config.py` resolve properly.
 - Put that file in `~/.config/mymedia`.
 
 # TODO
  - The current picker should grab the poster image from the db.
-
-# Roadmap for a whole refactor in Go
-
-1. make it a good cli app
-
-## Cli UX
-- mymedia scan : performs what metadata.py does
-    - implement info flag ?
-- mymedia picker : replacement for picker.go
-
-## Scan
+ - implement the scan command in go
