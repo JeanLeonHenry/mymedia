@@ -16,3 +16,14 @@ For now, running `metadata.py` will
 
 # TODO
  - The current picker should grab the poster image from the db.
+
+# Roadmap for a whole refactor in Go
+
+1. make it a good cli app
+
+## Cli UX
+- mymedia scan : performs what metadata.py does
+    - implement info flag ?
+- mymedia picker : replacement for picker.go
+
+## Scan

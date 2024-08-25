@@ -1,5 +1,5 @@
 import sqlite3
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from config import DB_PATH
 
@@ -16,7 +16,7 @@ class DataBaseHandler:
             )
             self.connection.commit()
 
-    def push(self, data: dict):
+    def write(self, data: dict):
         cur = self.connection.cursor()
         cur.execute(
             "INSERT INTO media VALUES(:id, :media_type, :title, :year, :overview, :director, :poster, :path)",
@@ -33,28 +33,20 @@ class DataBaseHandler:
             res = cur.execute(query).fetchall()
         return res
 
-    def search(
-        self,
-        id: Optional[int] = None,
-        title: Optional[str] = None,
-        year: Optional[int] = None,
-    ) -> tuple:
-        """Query the db by either an id or (title, year)."""
+    def searchById(self, id: int) -> Optional[Tuple[str, int]]:
         cur = self.connection.cursor()
-        query = None
-        data = None
-        if id is not None:
-            query = "SELECT title, year FROM media WHERE media.id = ?"
-            data = (id,)
-        elif title and year:
-            query = "SELECT id FROM media WHERE media.title = ? AND media.year = ?"
-            data = (title, year)
-        else:
-            raise ValueError("Wrong arguments")
+        query = "SELECT title, year FROM media WHERE media.id = ?"
+        data = (id,)
         # FIX: handle the case where there's several results
         res = cur.execute(query, data).fetchone()
-        if res is None:
-            return ()
+        return res
+
+    def searchByInfo(self, title: str, year: int) -> Optional[Tuple[int]]:
+        cur = self.connection.cursor()
+        query = "SELECT id FROM media WHERE media.title = ? AND media.year = ?"
+        data = (title, year)
+        # FIX: handle the case where there's several results
+        res = cur.execute(query, data).fetchone()
         return res
 
     def update_path(self, id: int, data: str) -> None:

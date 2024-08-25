@@ -13,4 +13,4 @@ DB_PATH = config["DB_PATH"]
 MEDIA_DIR = config["MEDIA_DIR"]
 
 if __name__ == "__main__":
-    pprint.pprint(config)
+    pprint.pprint(dict(config))
