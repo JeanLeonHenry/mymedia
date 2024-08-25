@@ -156,7 +156,7 @@ if __name__ == "__main__":
         data["poster"] = poster
         database.write(data)
         print(
-            f"󰏫 Wrote {pprint.pformat(data_no_poster)} media info to db (hiding poster)."
+            f"󰏫 Wrote the following info to db (hiding the poster) \n{pprint.pformat(data_no_poster)}"
         )
     else:
         print(
