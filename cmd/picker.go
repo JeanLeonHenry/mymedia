@@ -1,22 +1,18 @@
 package cmd
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	fzf "github.com/junegunn/fzf/src"
-	"github.com/profclems/go-dotenv"
 
 	_ "modernc.org/sqlite"
 )
 
-// pickerCmd represents the picker command
 var pickerCmd = &cobra.Command{
 	Use:   "picker",
 	Short: "TUI to query the database",
@@ -26,23 +22,10 @@ NOTE: external dependencies: fold, kitty
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// NOTE: use viper for better config handling ?
-		dotenv.SetConfigFile(path.Join(os.Getenv("HOME"), ".config/mymedia/.env"))
-		dbPath := dotenv.GetString("DB_PATH")
-		if dbPath == "" {
-			log.Fatal("db path is empty, check config file.")
-		}
 		inputChan := make(chan string)
 		go func() {
-			db, err := sql.Open("sqlite", dbPath)
-			if err != nil {
-				log.Fatal("Error opening db file at '", dbPath, "' ", err)
-			}
-			if err := db.Ping(); err != nil {
-				log.Fatal("Error pinging '", dbPath, "' file", err)
-			}
 			query := "SELECT title, year, overview, director, path FROM media ORDER BY title, year ASC"
-			rows, err := db.Query(query)
+			rows, err := config.DB.Query(query)
 			if err != nil {
 				log.Fatal("Query error : ", err)
 			}

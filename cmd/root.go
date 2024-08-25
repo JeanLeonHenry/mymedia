@@ -1,10 +1,17 @@
 package cmd
 
 import (
+	"log"
 	"os"
+	"path"
 
+	"github.com/JeanLeonHenry/mymedia/internal/db"
+	"github.com/profclems/go-dotenv"
 	"github.com/spf13/cobra"
 )
+
+// HACK: global var for config
+var config *db.DBHandler
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -26,6 +33,13 @@ func Execute() {
 }
 
 func init() {
+	// NOTE: use viper for better config handling ?
+	dotenv.SetConfigFile(path.Join(os.Getenv("HOME"), ".config/mymedia/.env"))
+	dbPath := dotenv.GetString("DB_PATH")
+	if dbPath == "" {
+		log.Fatal("db path is empty, check config file.")
+	}
+	config = db.NewDB(dbPath)
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
