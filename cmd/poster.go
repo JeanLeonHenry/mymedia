@@ -8,6 +8,8 @@ import (
 	_ "image/jpeg"
 	"log"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -23,16 +25,28 @@ var posterCmd = &cobra.Command{
 		if _, err := os.ReadFile(filename); err == nil {
 			// file is there
 			if replace, err := cmd.Flags().GetBool("replace"); err != nil {
-				log.Fatalln("Couldn't read replace flag from config")
+				log.Fatalln(" Couldn't read replace flag from config")
 			} else if !replace {
 				fmt.Printf("Found %v, quitting.\n", filename)
 				return
 			}
 		}
 		query := "SELECT poster FROM media WHERE LOWER(media.title)=LOWER(?)"
-		title, _ := cmd.Flags().GetString("title")
+		title, err := cmd.Flags().GetString("title")
+		if err != nil {
+			log.Fatalln(" Couldn't read title flag from config")
+		}
 		if title == "" {
-			log.Fatalf(" Wrong args: title musn't be empty")
+			cwd, err := os.Getwd()
+			if err != nil {
+				log.Fatalln(" Wrong args: title is empty and I can't get the cwd")
+			}
+			basePath := path.Base(cwd)
+			fields := strings.Fields(basePath)
+			if len(fields) != 2 {
+				log.Fatalf(" Cwd name is badly formatted, must be 'TITLE (YEAR)'")
+			}
+			title = strings.Join(fields[:len(fields)-1], " ")
 		}
 		row := config.DB.QueryRow(query, title)
 		var poster []byte
