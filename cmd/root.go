@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -10,10 +11,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// HACK: global var for config
+// FIX: don't use global var for config
 var config struct {
 	DBH              *db.DBHandler
 	DefaultTolerance int
+	ApiUrl           string
+	ApiReadToken     string
+	Debug            *bool
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -42,8 +46,26 @@ func init() {
 	if dbPath == "" {
 		log.Fatal("db path is empty, check config file.")
 	}
+	configOk := true
 	config.DBH = db.NewDB(dbPath)
 	config.DefaultTolerance = 2
+	config.ApiUrl = dotenv.GetString("API_URL")
+	if config.ApiUrl == "" {
+		log.Print("api url is empty, check config file.")
+		configOk = false
+	}
+	config.ApiReadToken = dotenv.GetString("API_READ_TOKEN")
+	if config.ApiReadToken == "" {
+		log.Print("api read token is empty, check config file.")
+		configOk = false
+	}
+
+	msg := fmt.Sprintf("ConfigOk was %v: %+v", configOk, config)
+	if !configOk {
+		log.Fatal(msg)
+	}
+	debug := false
+	config.Debug = &debug
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.

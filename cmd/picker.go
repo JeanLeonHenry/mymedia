@@ -18,7 +18,7 @@ var pickerCmd = &cobra.Command{
 	Short: "TUI to query the database",
 	Long: `Provides a fzf-based TUI to query the database.
 The output will be the path to the selected media directory.
-NOTE: external dependencies: fold, kitty
+External dependencies: fold, kitty
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
