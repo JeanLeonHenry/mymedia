@@ -17,7 +17,7 @@ import (
 // posterCmd represents the poster command
 var posterCmd = &cobra.Command{
 	Use:   "poster",
-	Short: "Reads poster from db and write it in cwd",
+	Short: "Given a title, reads poster from db and write it in cwd",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		const filename = "poster.jpeg"
@@ -48,7 +48,7 @@ var posterCmd = &cobra.Command{
 			}
 			title = strings.Join(fields[:len(fields)-1], " ")
 		}
-		row := config.DB.QueryRow(query, title)
+		row := config.DBH.DB.QueryRow(query, title)
 		var poster []byte
 		if err := row.Scan(&poster); err != nil {
 			log.Fatalf(" Couldn't get the poster from db for «%v»: %v", title, err)
@@ -81,5 +81,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	posterCmd.Flags().BoolP("replace", "r", false, "if replace is true, replace file if it exists")
-	posterCmd.Flags().StringP("title", "t", "", "media title, case insensitive")
+	posterCmd.Flags().StringP("title", "t", "", "media title, case insensitive, will be read from cwd name if missing")
 }

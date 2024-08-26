@@ -11,7 +11,10 @@ import (
 )
 
 // HACK: global var for config
-var config *db.DBHandler
+var config struct {
+	DBH              *db.DBHandler
+	DefaultTolerance int
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -39,7 +42,8 @@ func init() {
 	if dbPath == "" {
 		log.Fatal("db path is empty, check config file.")
 	}
-	config = db.NewDB(dbPath)
+	config.DBH = db.NewDB(dbPath)
+	config.DefaultTolerance = 2
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.

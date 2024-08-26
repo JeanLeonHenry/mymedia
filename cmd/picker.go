@@ -25,7 +25,7 @@ NOTE: external dependencies: fold, kitty
 		inputChan := make(chan string)
 		go func() {
 			query := "SELECT title, year, overview, director, path FROM media ORDER BY title, year ASC"
-			rows, err := config.DB.Query(query)
+			rows, err := config.DBH.DB.Query(query)
 			if err != nil {
 				log.Fatal("Query error : ", err)
 			}
