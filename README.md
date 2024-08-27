@@ -26,6 +26,11 @@ CREATE TABLE media(id, media_type, title, year, overview, director, poster, path
 ```
 the `poster` field holds the raw bytes for the poster image downloaded from TMDB.
 
+# Installation
+1. Install go
+2. Clone the repo
+3. `go install -v .` should do it (beware of $PATH issues)
+
 # Configuration
 - Make a `.env` file so that the variables in `config/config.go` resolve properly.
 - Put that file in `~/.config/mymedia`.
