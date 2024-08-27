@@ -31,4 +31,5 @@ the `poster` field holds the raw bytes for the poster image downloaded from TMDB
 - Put that file in `~/.config/mymedia`.
 
 # TODO
- - The current picker should grab the poster image from the db.
+- cmd/picker.go:		// TODO: use poster image from db. idea: when fzf selected item change, write poster blob to a tmp file, use that in preview
+- internal/db/db.go:	// FIX: dbh should ensure the the existence of db instead of panicing?
