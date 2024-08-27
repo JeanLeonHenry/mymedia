@@ -88,12 +88,12 @@ func (m *Media) GetDirector(apiReadToken string) {
 	credits := &MediaCredits{}
 	if err := json.Unmarshal(data, credits); err != nil {
 		m.Director = ""
-		fmt.Printf(" Found no director for %v\n", m)
+		fmt.Println(" Found no director for ", m)
 		return
 	}
 	if len(credits.Crew) == 0 {
 		m.Director = ""
-		fmt.Printf(" Found no director for %v\n", m)
+		fmt.Println(" Found no director for ", m)
 		return
 	}
 	firstDirectorIndex := slices.IndexFunc(credits.Crew, func(c CrewMember) bool {
@@ -101,7 +101,7 @@ func (m *Media) GetDirector(apiReadToken string) {
 	})
 	if firstDirectorIndex == -1 {
 		m.Director = ""
-		fmt.Printf(" Found no director for %v\n", m)
+		fmt.Println(" Found no director for ", m)
 		return
 	}
 	m.Director = credits.Crew[firstDirectorIndex].Name
@@ -110,17 +110,17 @@ func (m *Media) GetDirector(apiReadToken string) {
 
 func (m *Media) GetPoster(apiKey string) {
 	spinner := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
-	spinner.Suffix = " Downloading poster"
+	spinner.Suffix = " Downloading poster\n"
 	spinner.Start()
 	if m.PosterPath == "" {
-		spinner.FinalMSG = " Tried to get the poster of a media without one"
+		spinner.FinalMSG = " Tried to get the poster of a media without one\n"
 		spinner.Stop()
 		return
 	}
-	spinner.FinalMSG = "✓ Downloaded poster\n"
 	data := PollImgApi(m.PosterPath, apiKey)
-	spinner.Stop()
 	m.PosterData = data
+	spinner.FinalMSG = "✓ Downloaded poster\n"
+	spinner.Stop()
 }
 
 type MediaCredits struct {

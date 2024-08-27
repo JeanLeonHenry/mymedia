@@ -41,28 +41,28 @@ func parseArgs(cmd *cobra.Command) (string, int, int) {
 		basePath := path.Base(cwd)
 		fields := strings.Fields(basePath)
 		if len(fields) < 2 {
-			log.Fatalf(" Cwd name is badly formatted, must be 'TITLE (YEAR)'")
+			log.Fatalln(" Cwd name is badly formatted, must be 'TITLE (YEAR)'")
 		}
 		title = strings.Join(fields[:len(fields)-1], " ")
 		lastField := fields[len(fields)-1]
 		if currentYear := time.Now().Year(); len(lastField) <= 2 || len(lastField)-2 != len(strconv.Itoa(currentYear)) {
-			log.Fatalf(" Year has a wrong amount of digits, its %v and you gave %v", currentYear, lastField)
+			log.Fatalf(" Year has a wrong amount of digits, its %v and you gave %v\n", currentYear, lastField)
 		}
 		yearString := lastField[1 : len(lastField)-1]
 		year, err = strconv.Atoi(yearString)
 		if err != nil {
-			log.Fatalf(" Cwd name is badly formatted, must be 'TITLE (YEAR)'")
+			log.Fatalln(" Cwd name is badly formatted, must be 'TITLE (YEAR)'")
 		} else if isWrongYear(year) {
-			log.Fatalf(" Year must be between %v and %v", 1800, time.Now().Year()+10)
+			log.Fatalf(" Year must be between %v and %v\n", 1800, time.Now().Year()+10)
 		}
 	}
 	tolerance, err := cmd.Flags().GetInt("tolerance")
 	if err != nil {
-		log.Fatalf(" Couldn't read tolerance flag")
+		log.Fatalln(" Couldn't read tolerance flag")
 	}
 	if tolerance > 5 || tolerance < 0 {
 		tolerance = localConfig.DefaultTolerance
-		log.Printf(" Tolerance should be between 0 and 5 inclusive. Using %v", tolerance)
+		log.Printf(" Tolerance should be between 0 and 5 inclusive. Using %v\n", tolerance)
 	}
 	return title, year, tolerance
 }
@@ -119,12 +119,15 @@ var scanCmd = &cobra.Command{
 			2 check db if we have a match: ask if we keep that data (quit) or replace it
 			3 poll api, get results, validate them
 			4 find a reasonnable match in the results
-			5 check db before writing the match
+			5 check db before writing the match if user accepts
 		*/
+		// 1
 		title, year, tolerance := parseArgs(cmd)
+		// 2
 		if localConfig.DBH.CheckDB(title, year, tolerance, debug) {
 			utils.AcceptOrQuit("Proceed to online lookup?")
 		}
+		// 3
 		response := api.ApiMultiSearch(title, localConfig.ApiReadToken)
 		validate := validator.New(validator.WithRequiredStructEnabled())
 		validResults := validateResults(validate, response.Results)
@@ -132,6 +135,7 @@ var scanCmd = &cobra.Command{
 			fmt.Printf("∅ Found no match for «%v» (%v).\n", title, year)
 			return
 		}
+		// 4
 		media, ok := findYearMatch(validResults, year, tolerance)
 		if !ok {
 			out := media.String()
@@ -146,20 +150,26 @@ var scanCmd = &cobra.Command{
 			out = media.Dump()
 		}
 		fmt.Printf("✓ Found TMDB.org match for «%v» (%v): %v\n", title, year, out)
+		// 5
 		if localConfig.DBH.CheckDB(media.GetTitle(), media.GetYear(), tolerance, debug) {
 			utils.AcceptOrQuit("Write to DB anyway?")
 		}
 		media.GetDirector(localConfig.ApiReadToken)
 		media.GetPoster(localConfig.ApiKey)
 		if cwdPath, err := os.Getwd(); err != nil {
-			log.Fatalf(" Couldn't get current dir path\n")
+			log.Fatalln(" Couldn't get current dir path")
 		} else {
-			localConfig.DBH.WriteToDB(media, cwdPath)
-			fmt.Printf("✓ Wrote to DB: %v\n", media)
+			_, err := localConfig.DBH.WriteToDB(media, cwdPath)
+			if err != nil {
+				log.Fatalln(" DB write error: ", err)
+			}
+			fmt.Println("✓ Wrote to DB: ", media)
+			if debug {
+				fmt.Println("Tried writing/Wrote: ", media.Dump())
+			}
 		}
 		if debug {
 			fmt.Println("-- DUMP --")
-			fmt.Println("Wrote: ", media.Dump())
 			fmt.Println("Dumping config")
 			fmt.Println(localConfig)
 		}
@@ -167,7 +177,9 @@ var scanCmd = &cobra.Command{
 }
 
 func init() {
-	log.Default().SetFlags(log.LstdFlags | log.Lshortfile)
+	if debug {
+		log.Default().SetFlags(log.LstdFlags | log.Lshortfile)
+	}
 	rootCmd.AddCommand(scanCmd)
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
@@ -175,7 +187,6 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	scanCmd.Flags().BoolP("replace", "r", false, "if replace is true, replace db data if it exists")
 	scanCmd.Flags().StringP("title", "t", "", "media title, case insensitive, will be read from cwd name if missing")
 	scanCmd.Flags().IntP("year", "y", 0, "media release year")
 	scanCmd.Flags().Int("tolerance", 2, "on lookup, result will be accepted if title match and year is within tolerance of result")

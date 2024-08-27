@@ -16,7 +16,7 @@ func AcceptOrQuit(prompt string) {
 	fmt.Print(prompt + " [y/N] ")
 	var userInput string
 	if _, err := fmt.Scanln(&userInput); err != nil || userInput != "y" {
-		fmt.Print("Quitting.")
+		fmt.Println("Quitting.")
 		os.Exit(1)
 	}
 }
