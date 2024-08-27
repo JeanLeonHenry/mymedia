@@ -88,12 +88,12 @@ func (m *Media) GetDirector(apiReadToken string) {
 	credits := &MediaCredits{}
 	if err := json.Unmarshal(data, credits); err != nil {
 		m.Director = ""
-		fmt.Printf(" Found no director for %v", m)
+		fmt.Printf(" Found no director for %v\n", m)
 		return
 	}
 	if len(credits.Crew) == 0 {
 		m.Director = ""
-		fmt.Printf(" Found no director for %v", m)
+		fmt.Printf(" Found no director for %v\n", m)
 		return
 	}
 	firstDirectorIndex := slices.IndexFunc(credits.Crew, func(c CrewMember) bool {
@@ -101,11 +101,11 @@ func (m *Media) GetDirector(apiReadToken string) {
 	})
 	if firstDirectorIndex == -1 {
 		m.Director = ""
-		fmt.Printf(" Found no director for %v", m)
+		fmt.Printf(" Found no director for %v\n", m)
 		return
 	}
 	m.Director = credits.Crew[firstDirectorIndex].Name
-	fmt.Printf(" Found director %v for %v", m.Director, m)
+	fmt.Printf(" Found director %v for %v\n", m.Director, m)
 }
 
 func (m *Media) GetPoster(apiKey string) {

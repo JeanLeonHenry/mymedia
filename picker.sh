@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-folder="$(mymedia picker)"
+folder="$("$HOME"/go/bin/mymedia picker)"
 echo "Got folder: $folder"
 if [[ -n "$folder" ]]; then
 	notify-send "$(basename "$folder")"

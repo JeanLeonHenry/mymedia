@@ -63,7 +63,7 @@ func (dbh *DBHandler) CheckDB(title string, year int, tolerance int, debug bool)
 	return true
 }
 func (dbh *DBHandler) WriteToDB(media api.Media, path string) {
-	// dbInsert := "INSERT INTO media VALUES(:id, :media_type, :title, :year, :overview, :director, :poster, :path)"
-	dbInsert := "INSERT INTO media VALUES(?,?,?,?,?,?,?,?)"
+	// TODO: handle the case where media.ID is already in the DB
+	dbInsert := "INSERT INTO media(id, media_type, title, year, overview, director, poster, path) VALUES(?,?,?,?,?,?,?,?)"
 	dbh.DB.Exec(dbInsert, media.ID, media.MediaType, media.GetTitle(), media.GetYear(), media.Overview, media.Director, media.PosterData, path)
 }
