@@ -17,7 +17,7 @@ type DBHandler struct {
 }
 
 func NewDB(path string) *DBHandler {
-	// FIX: dbh should ensure the the existence of db instead of panicing?
+	// FIX: dbh should ensure the existence of db instead of panicing?
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		log.Fatal("Error opening db file at '", path, "' ", err)
@@ -47,6 +47,7 @@ func (dbh *DBHandler) CheckDB(title string, year int, tolerance int, debug bool)
 		Director:  director,
 		Overview:  overview,
 	}
+	// HACK: why not store and use the whole date
 	dateFromYear := strconv.Itoa(yearDB) + "-01-01"
 	if media_type == api.MediaTypeTV {
 		result.FirstAirDate = dateFromYear
@@ -62,8 +63,8 @@ func (dbh *DBHandler) CheckDB(title string, year int, tolerance int, debug bool)
 	fmt.Printf("✓ Found %v in DB.\n", out)
 	return true
 }
-func (dbh *DBHandler) WriteToDB(media api.Media, path string) {
-	// TODO: handle the case where media.ID is already in the DB
-	dbInsert := "INSERT INTO media(id, media_type, title, year, overview, director, poster, path) VALUES(?,?,?,?,?,?,?,?)"
-	dbh.DB.Exec(dbInsert, media.ID, media.MediaType, media.GetTitle(), media.GetYear(), media.Overview, media.Director, media.PosterData, path)
+func (dbh *DBHandler) WriteToDB(media api.Media, path string) (sql.Result, error) {
+	dbInsert := "INSERT OR REPLACE INTO media(id, media_type, title, year, overview, director, poster, path) VALUES(?,?,?,?,?,?,?,?)"
+	res, err := dbh.DB.Exec(dbInsert, media.ID, media.MediaType, media.GetTitle(), media.GetYear(), media.Overview, media.Director, media.PosterData, path)
+	return res, err
 }
