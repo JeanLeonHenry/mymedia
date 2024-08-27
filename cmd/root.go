@@ -4,21 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 
-	"github.com/JeanLeonHenry/mymedia/internal/db"
-	"github.com/profclems/go-dotenv"
+	"github.com/JeanLeonHenry/mymedia/config"
 	"github.com/spf13/cobra"
 )
-
-// FIX: don't use global var for config
-var config struct {
-	DBH              *db.DBHandler
-	DefaultTolerance int
-	ApiUrl           string
-	ApiReadToken     string
-	Debug            *bool
-}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -29,6 +18,8 @@ var rootCmd = &cobra.Command{
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
+var localConfig *config.Config
+var debug bool
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -40,36 +31,17 @@ func Execute() {
 }
 
 func init() {
-	// NOTE: use viper for better config handling ?
-	dotenv.SetConfigFile(path.Join(os.Getenv("HOME"), ".config/mymedia/.env"))
-	dbPath := dotenv.GetString("DB_PATH")
-	if dbPath == "" {
-		log.Fatal("db path is empty, check config file.")
-	}
-	configOk := true
-	config.DBH = db.NewDB(dbPath)
-	config.DefaultTolerance = 2
-	config.ApiUrl = dotenv.GetString("API_URL")
-	if config.ApiUrl == "" {
-		log.Print("api url is empty, check config file.")
-		configOk = false
-	}
-	config.ApiReadToken = dotenv.GetString("API_READ_TOKEN")
-	if config.ApiReadToken == "" {
-		log.Print("api read token is empty, check config file.")
-		configOk = false
-	}
-
-	msg := fmt.Sprintf("ConfigOk was %v: %+v", configOk, config)
-	if !configOk {
+	localConfig = config.New()
+	localConfig.Check()
+	msg := fmt.Sprintf("Was config valid ? %v\nConfig was : %+v", localConfig.IsValid, localConfig)
+	if !localConfig.IsValid {
 		log.Fatal(msg)
 	}
-	debug := false
-	config.Debug = &debug
+	// NOTE: use viper for better config handling ?
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "add extra logging")
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.mymedia.yaml)")
 
 	// Cobra also supports local flags, which will only run

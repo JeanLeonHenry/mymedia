@@ -1,40 +1,34 @@
 # Usage
 Build and query a media library.
+
 ```
 Usage:
   mymedia [command]
 
 Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
   picker      TUI to query the database
-  poster      Reads poster from db and write it in cwd
-
-WIP:
+  poster      Given a title, reads poster from db and write it in cwd
   scan        Scans the current folder for media folders and update database
+
+Flags:
+  -d, --debug   add extra logging
+  -h, --help    help for mymedia
+
+Use "mymedia [command] --help" for more information about a command.
 ```
-## Picker
-Provides a fzf-based TUI to query the database.
-The output will be the path to the selected media directory.
-⚠️ external dependencies: fold, kitty
 
 ## Poster
-the config (see below) must provide a path to `.db` file that is the result of the following sqlite statement
+the config (see below) must provide a path to `.db` file that contains a table created with
 ```sql
 CREATE TABLE media(id, media_type, title, year, overview, director, poster, path)
 ```
 the `poster` field holds the raw bytes for the poster image downloaded from TMDB.
 
-```
-Usage:
-  mymedia poster [flags]
-
-Flags:
-  -r, --replace        if replace is true, replace file if it exists
-  -t, --title string   media title, case insensitive, will be read from cwd name if missing
-```
 # Configuration
-- Make a `.env` file so that the variables in `config.py` resolve properly.
+- Make a `.env` file so that the variables in `config/config.go` resolve properly.
 - Put that file in `~/.config/mymedia`.
 
 # TODO
  - The current picker should grab the poster image from the db.
- - implement the scan command in go

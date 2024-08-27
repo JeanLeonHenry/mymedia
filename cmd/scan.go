@@ -2,14 +2,8 @@ package cmd
 
 import (
 	"cmp"
-	"database/sql"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"slices"
@@ -17,88 +11,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JeanLeonHenry/mymedia/internal/api"
+	"github.com/JeanLeonHenry/mymedia/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/cobra"
 )
 
-var abs = func(x int) int {
-	if x <= 0 {
-		return -x
-	}
-	return x
-}
-
-// TODO: add validation tags
-type Media struct {
-	ID               int      `json:"id"`
-	Title            string   `json:"title"`
-	Name             string   `json:"name"`
-	MediaType        string   `json:"media_type"`
-	ReleaseDate      string   `json:"release_date" validate:"required_without=FirstAirDate,datetime=2006-01-02"`
-	FirstAirDate     string   `json:"first_air_date" validate:"required_without=ReleaseDate,datetime=2006-01-02"`
-	Overview         string   `json:"overview"`
-	PosterPath       any      `json:"poster_path"`
-	OriginalLanguage string   `json:"original_language"`
-	OriginalName     string   `json:"original_name"`
-	OriginalTitle    string   `json:"original_title"`
-	OriginCountry    []string `json:"origin_country"`
-	Adult            bool     `json:"adult"`
-}
-
-const (
-	MediaTypePerson = "person"
-	MediaTypeTV     = "tv"
-	MediaTypeMovie  = "movie"
-)
-
-var MediaTypeIcons = map[string]string{
-	MediaTypePerson: "",
-	MediaTypeTV:     "",
-	MediaTypeMovie:  "󰿏",
-}
-
-func (m Media) GetYear() int {
-	// NOTE: this is assumed to take place after validation, so at least one is non empty and parses out to a date
-	var dateToParse string
-	if m.ReleaseDate == "" {
-		dateToParse = m.FirstAirDate
-	} else {
-		dateToParse = m.ReleaseDate
-	}
-	date, _ := time.Parse(time.DateOnly, dateToParse)
-	return date.Year()
-}
-
-func (m Media) Url() string {
-	return fmt.Sprintf("https://themoviedb.org/%v/%v", m.MediaType, m.ID)
-}
-
-func (m Media) GetTitle() string {
-	// NOTE: this is assumed to take place after validation, so at least of the two is non empty
-	if m.Title == "" {
-		return m.Name
-	}
-	return m.Title
-}
-
-func (m Media) writeToDB() {
-	// TODO: implement write data to db
-}
-
-func (m Media) downloadExtraInfo() Media {
-	// TODO: implement director and poster download
-	return m
-}
-
-func (m Media) String() (result string) {
-	result = fmt.Sprintf("%v «%v» (%v) @ %v", MediaTypeIcons[m.MediaType], m.GetTitle(), m.GetYear(), m.Url())
-	return
-}
-
-type MultiSearchResponse struct {
-	TotalResults int     `json:"total_results"`
-	Results      []Media `json:"results"`
-}
+const validationErrorMessage = `Field      %20v
+Failed     %20v =%v
+Got        %20v (type %v, kind %v)` + "\n"
 
 func parseArgs(cmd *cobra.Command) (string, int, int) {
 	title, err := cmd.Flags().GetString("title")
@@ -140,89 +61,18 @@ func parseArgs(cmd *cobra.Command) (string, int, int) {
 		log.Fatalf(" Couldn't read tolerance flag")
 	}
 	if tolerance > 5 || tolerance < 0 {
-		tolerance = config.DefaultTolerance
+		tolerance = localConfig.DefaultTolerance
 		log.Printf(" Tolerance should be between 0 and 5 inclusive. Using %v", tolerance)
 	}
 	return title, year, tolerance
 }
 
-func acceptOrQuit(prompt string) {
-	fmt.Print(prompt + " [y/N] ")
-	var userInput string
-	if _, err := fmt.Scanln(&userInput); err != nil || userInput != "y" {
-		fmt.Print("Quitting.")
-		os.Exit(1)
-	}
-}
-
-// checkDB looks up the db for a media record with case-insensitive matching titles and a year within tolerance of year
-func checkDB(title string, year int, tolerance int) bool {
-	dBQuery := "SELECT title, year, id, media_type FROM media WHERE lower(media.title)=lower(?) AND ABS(media.year-?)<=?"
-	rows := config.DBH.DB.QueryRow(dBQuery, title, year, tolerance)
-	var titleDB, media_type string
-	var yearDB, id int
-	if err := rows.Scan(&titleDB, &yearDB, &id, &media_type); err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Fatal(" Query error: ", err)
-		}
-		// found no match, check is complete
-		return false
-	}
-	fmt.Printf("✓ Found %v (%v) in DB.\n Its TMDB page is https://www.themoviedb.org/%v/%v\n", titleDB, yearDB, media_type, id)
-	return true
-}
-
-func apiMultiSearch(apiQuery string) MultiSearchResponse {
-	endpoint := "search/multi"
-	if apiQuery == "" {
-		fmt.Printf("󰍉 Searching TMDB.org on %v\n", endpoint)
-	} else {
-		fmt.Printf("󰍉 Searching TMDB.org on %v for %v\n", endpoint, apiQuery)
-	}
-	fullUrl, err := url.JoinPath(config.ApiUrl, endpoint)
-	if err != nil {
-		log.Fatalf(" Api url couldn't be formed: %+v", config)
-	}
-	parsedUrl, err := url.Parse(fullUrl)
-	if err != nil {
-		log.Fatalln(" Api url couldn't be parsed: check config file")
-	}
-	if apiQuery != "" {
-		v := url.Values{}
-		v.Set("query", apiQuery)
-		parsedUrl.RawQuery = v.Encode()
-	}
-	req, err := http.NewRequest("GET", parsedUrl.String(), nil)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+config.ApiReadToken)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(" Error contacting the API: ", err)
-	}
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf(" Error reading the API's response")
-	}
-	if resp.StatusCode >= 400 {
-		log.Fatalln(" Error contacting the API: ", data)
-	}
-
-	object := new(MultiSearchResponse)
-	if err := json.Unmarshal(data, object); err != nil {
-		log.Fatalln(" Error unpacking the API's response: ", err)
-	}
-	if *config.Debug {
-		// log.Printf("Got results: %+v\nfrom request %+v", object.Results, req)
-	}
-	return *object
-}
-
 // findYearMatch finds the first element of media whose year (given by GetYear()) is minimum.
 // If that isn't with tolerance of year, found is false.
 // Panics if media is empty.
-func findYearMatch(media []Media, year int, tolerance int) (result Media, found bool) {
-	distanceToRef := func(x int) int { return abs(x - year) }
-	result = slices.MinFunc(media, func(a, b Media) int {
+func findYearMatch(mediaSlice []api.Media, year int, tolerance int) (result api.Media, found bool) {
+	distanceToRef := func(x int) int { return utils.Abs(x - year) }
+	result = slices.MinFunc(mediaSlice, func(a, b api.Media) int {
 		yearA, yearB := a.GetYear(), b.GetYear()
 		return cmp.Compare(distanceToRef(yearA), distanceToRef(yearB))
 	})
@@ -232,20 +82,23 @@ func findYearMatch(media []Media, year int, tolerance int) (result Media, found 
 	return result, true
 }
 
-func validateResults(validate *validator.Validate, results []Media) (validResults []Media) {
+func validateResults(validate *validator.Validate, results []api.Media) (validResults []api.Media) {
 	for _, r := range results {
 		err := validate.Struct(r)
 		if err != nil {
-			if !*config.Debug {
+			if !debug {
 				continue
 			}
 			for _, err := range err.(validator.ValidationErrors) {
-				// TODO: better validation error msg
-				fmt.Println(" Error validating: " + fmt.Sprintf("%+v", r))
-				fmt.Println("Field ", err.StructNamespace(), err.StructField())
-				fmt.Printf("Got %v\n", err.Value())
-				fmt.Println("Validation tag ", err.Tag(), err.ActualTag(), "with param", err.Param())
-				fmt.Println("Datatypes ", err.Kind(), err.Type())
+				fmt.Println(" Error validating result: " + r.Dump())
+				fmt.Printf(validationErrorMessage,
+					err.StructNamespace(),
+					err.ActualTag(), err.Param(),
+					err.Value(),
+					err.Type(),
+					err.Kind(),
+				)
+				os.Exit(1)
 			}
 		}
 		validResults = append(validResults, r)
@@ -260,10 +113,6 @@ var scanCmd = &cobra.Command{
 	Long:    `WIP`,
 	Example: ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: remove this warning when finished
-		if !*config.Debug {
-			fmt.Println(" this is not done. Use --debug/-d flag to continue development, or the python script for actual use.")
-		}
 		/*
 			PLAN
 			1 get (title, year) from config
@@ -273,10 +122,10 @@ var scanCmd = &cobra.Command{
 			5 check db before writing the match
 		*/
 		title, year, tolerance := parseArgs(cmd)
-		if checkDB(title, year, tolerance) {
-			acceptOrQuit("Proceed to online lookup?")
+		if localConfig.DBH.CheckDB(title, year, tolerance, debug) {
+			utils.AcceptOrQuit("Proceed to online lookup?")
 		}
-		response := apiMultiSearch(title)
+		response := api.ApiMultiSearch(title, localConfig.ApiReadToken)
 		validate := validator.New(validator.WithRequiredStructEnabled())
 		validResults := validateResults(validate, response.Results)
 		if len(validResults) == 0 {
@@ -285,14 +134,35 @@ var scanCmd = &cobra.Command{
 		}
 		media, ok := findYearMatch(validResults, year, tolerance)
 		if !ok {
-			fmt.Printf("∅ Found no match for «%v» (%v).\nClosest match was : %+v\n", title, year, media)
+			out := media.String()
+			if debug {
+				out = media.Dump()
+			}
+			fmt.Printf("∅ Found no match for «%v» (%v).\nClosest match was : %+v\n", title, year, out)
 			return
 		}
-		fmt.Printf("✓ Found TMDB.org match for «%v» (%v): %v\n", title, year, media.Url())
-		if checkDB(media.GetTitle(), media.GetYear(), tolerance) {
-			acceptOrQuit("Write to DB anyway?")
+		out := media.String()
+		if debug {
+			out = media.Dump()
 		}
-		media.downloadExtraInfo().writeToDB()
+		fmt.Printf("✓ Found TMDB.org match for «%v» (%v): %v\n", title, year, out)
+		if localConfig.DBH.CheckDB(media.GetTitle(), media.GetYear(), tolerance, debug) {
+			utils.AcceptOrQuit("Write to DB anyway?")
+		}
+		media.GetDirector(localConfig.ApiReadToken)
+		media.GetPoster(localConfig.ApiKey)
+		if cwdPath, err := os.Getwd(); err != nil {
+			log.Fatalf(" Couldn't get current dir path\n")
+		} else {
+			localConfig.DBH.WriteToDB(media, cwdPath)
+			fmt.Printf("✓ Wrote to DB: %v\n", media)
+		}
+		if debug {
+			fmt.Println("-- DUMP --")
+			fmt.Println("Wrote: ", media.Dump())
+			fmt.Println("Dumping config")
+			fmt.Println(localConfig)
+		}
 	},
 }
 
@@ -309,6 +179,5 @@ func init() {
 	scanCmd.Flags().StringP("title", "t", "", "media title, case insensitive, will be read from cwd name if missing")
 	scanCmd.Flags().IntP("year", "y", 0, "media release year")
 	scanCmd.Flags().Int("tolerance", 2, "on lookup, result will be accepted if title match and year is within tolerance of result")
-	scanCmd.Flags().BoolVarP(config.Debug, "debug", "d", false, "if true, use wip implementation in go, else use working one in python")
 
 }

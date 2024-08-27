@@ -21,7 +21,6 @@ var posterCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		const filename = "poster.jpeg"
-		const yearTolerance = 2
 		if _, err := os.ReadFile(filename); err == nil {
 			// file is there
 			if replace, err := cmd.Flags().GetBool("replace"); err != nil {
@@ -31,7 +30,6 @@ var posterCmd = &cobra.Command{
 				return
 			}
 		}
-		query := "SELECT poster FROM media WHERE LOWER(media.title)=LOWER(?)"
 		title, err := cmd.Flags().GetString("title")
 		if err != nil {
 			log.Fatalln(" Couldn't read title flag from config")
@@ -43,12 +41,13 @@ var posterCmd = &cobra.Command{
 			}
 			basePath := path.Base(cwd)
 			fields := strings.Fields(basePath)
-			if len(fields) != 2 {
+			if len(fields) < 2 {
 				log.Fatalf(" Cwd name is badly formatted, must be 'TITLE (YEAR)'")
 			}
 			title = strings.Join(fields[:len(fields)-1], " ")
 		}
-		row := config.DBH.DB.QueryRow(query, title)
+		query := "SELECT poster FROM media WHERE LOWER(media.title)=LOWER(?)"
+		row := localConfig.DBH.DB.QueryRow(query, title)
 		var poster []byte
 		if err := row.Scan(&poster); err != nil {
 			log.Fatalf(" Couldn't get the poster from db for «%v»: %v", title, err)
