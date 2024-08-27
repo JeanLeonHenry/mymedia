@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
-folder=$( ~/prog/github.com/JeanLeonHenry/mymedia/myMediaUI/myMediaUI )
-notify-send "$(basename "$folder")"
-swallow mpv "$folder"
+folder="$(mymedia picker)"
+echo "Got folder: $folder"
+if [[ -n "$folder" ]]; then
+	notify-send "$(basename "$folder")"
+	swallow mpv "$folder"
+else
+	notify-send "No media"
+fi
