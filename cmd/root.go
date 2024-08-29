@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/JeanLeonHenry/mymedia/config"
 	"github.com/spf13/cobra"
@@ -11,9 +12,10 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "mymedia",
-	Short: "Build and query a media library.",
-	Long:  ``,
+	Use:     "mymedia",
+	Short:   "Build and query a media library.",
+	Long:    ``,
+	Version: time.Now().Format(time.DateTime),
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
