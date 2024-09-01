@@ -57,10 +57,10 @@ var posterCmd = &cobra.Command{
 			log.Fatalf(" Couldn't decode the poster for «%v»: %v", title, err)
 		}
 		f, err := os.Create(filename)
+		defer f.Close()
 		if err != nil {
 			log.Fatalf(" Coudln't create the poster file: %v", err)
 		}
-		defer f.Close()
 		if err = jpeg.Encode(f, img, nil); err != nil {
 			fmt.Printf(" Failed to encode: %v", err)
 		}

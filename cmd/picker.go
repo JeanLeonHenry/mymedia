@@ -24,21 +24,21 @@ External dependencies: fold, kitty
 
 		inputChan := make(chan string)
 		go func() {
-			query := "SELECT title, year, overview, director, path FROM media ORDER BY title, year ASC"
+			query := "SELECT title, year, overview, director, id, path FROM media ORDER BY title, year ASC"
 			rows, err := localConfig.DBH.DB.Query(query)
 			if err != nil {
 				log.Fatal("Query error : ", err)
 			}
 			for rows.Next() {
 				var title, overview, director, path string
-				var year int
-				if err := rows.Scan(&title, &year, &overview, &director, &path); err != nil {
+				var year, id int
+				if err := rows.Scan(&title, &year, &overview, &director, &id, &path); err != nil {
 					log.Fatal(err)
 				}
 				if director != "" {
 					director = " -- " + director
 				}
-				s := fmt.Sprintf("%v\t%v (%v)%v\t%v\t%v", title, title, year, director, overview, path)
+				s := fmt.Sprintf("%v\t%v (%v)%v\t%v\t%v\t%v", title, title, year, director, overview, id, path)
 				inputChan <- s
 			}
 			close(inputChan)
@@ -47,7 +47,7 @@ External dependencies: fold, kitty
 		outputChan := make(chan string)
 		go func() {
 			for s := range outputChan {
-				path := strings.FieldsFunc(s, func(r rune) bool { return r == '\t' })[3]
+				path := strings.FieldsFunc(s, func(r rune) bool { return r == '\t' })[4]
 				fmt.Println(path)
 			}
 		}()
@@ -60,10 +60,12 @@ External dependencies: fold, kitty
 		}
 
 		cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1"}
-		// TODO: use poster image from db. idea: when fzf selected item change, write poster blob to a tmp file, use that in preview
-		previewCmd := "echo {2};echo;echo {3}|fold -w ${FZF_PREVIEW_COLUMNS} -s;COLS=$((LINES*2/3));kitten icat --clear --transfer-mode=memory --stdin=no --unicode-placeholder --place=${COLS}x${FZF_PREVIEW_LINES}@0x0 {-1}/poster.*"
-		cmdLineOptions = append(cmdLineOptions, "--preview="+previewCmd)
 
+		posterFilePath := "/tmp/mymedia_poster.jpg"
+		query := fmt.Sprintf(`SELECT writefile("%v", poster) FROM media WHERE id={-2}`, posterFilePath)
+		cmdLineOptions = append(cmdLineOptions, `--bind=focus:execute-silent(sqlite3 `+localConfig.DBH.Path+` '`+query+`')`)
+		previewCmd := "echo {2};echo;echo {3}|fold -w ${FZF_PREVIEW_COLUMNS} -s;COLS=$((LINES*2/3));kitten icat --clear --transfer-mode=memory --stdin=no --unicode-placeholder --place=${COLS}x${FZF_PREVIEW_LINES}@0x0 " + posterFilePath
+		cmdLineOptions = append(cmdLineOptions, "--preview="+previewCmd)
 		// Build fzf.Options
 		options, err := fzf.ParseOptions(
 			true, // whether to load defaults ($FZF_DEFAULT_OPTS_FILE and $FZF_DEFAULT_OPTS)
