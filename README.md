@@ -22,7 +22,7 @@ Use "mymedia [command] --help" for more information about a command.
 # Installation
 1. Install go
 2. Clone the repo
-3. `go install -v .` should do it (beware of $PATH issues)
+3. `go install -v .` should do it (beware of `$PATH` issues)
 
 ## Runtime external dependencies
 The `picker` command displays the media poster in preview and relies on 
