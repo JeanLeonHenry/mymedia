@@ -151,9 +151,8 @@ var scanCmd = &cobra.Command{
 		}
 		fmt.Printf("✓ Found TMDB.org match for «%v» (%v): %v\n", title, year, out)
 		// 5
-		if localConfig.DBH.CheckDB(media.GetTitle(), media.GetYear(), tolerance, debug) {
-			utils.AcceptOrQuit("Write to DB anyway?")
-		}
+		localConfig.DBH.CheckDB(media.GetTitle(), media.GetYear(), tolerance, debug)
+		utils.AcceptOrQuit("Write to DB ?")
 		media.GetDirector(localConfig.ApiReadToken)
 		media.GetPoster(localConfig.ApiKey)
 		if cwdPath, err := os.Getwd(); err != nil {

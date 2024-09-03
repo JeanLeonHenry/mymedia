@@ -105,7 +105,7 @@ func (m *Media) GetDirector(apiReadToken string) {
 		return
 	}
 	m.Director = credits.Crew[firstDirectorIndex].Name
-	fmt.Printf(" Found director %v for %v\n", m.Director, m)
+	fmt.Printf("✓ Found director %v for %v\n", m.Director, m)
 }
 
 func (m *Media) GetPoster(apiKey string) {
