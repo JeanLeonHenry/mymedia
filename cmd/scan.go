@@ -108,10 +108,14 @@ func validateResults(validate *validator.Validate, results []api.Media) (validRe
 
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
-	Use:     "scan",
-	Short:   "Scans the current folder for media folders and update database",
-	Long:    `WIP`,
-	Example: ``,
+	Use:   "scan",
+	Short: "Scans the current folder for media folders and update database",
+	Long:  ``,
+	Example: `$ mymedia scan
+will get media info from current directory and proceed to look up.
+
+If the result is wrong, use the -t and -y flags to make lookup more accurate, especially for foreign movies.
+	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		/*
 			PLAN
