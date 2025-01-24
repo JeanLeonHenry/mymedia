@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/JeanLeonHenry/mymedia/internal/api"
@@ -21,7 +21,16 @@ const validationErrorMessage = `Field      %20v
 Failed     %20v =%v
 Got        %20v (type %v, kind %v)` + "\n"
 
-func parseArgs(cmd *cobra.Command) (string, int, int) {
+func cwdFormatError(extra string) {
+	log.Fatalln(" Cwd name is badly formatted, must be 'TITLE (YEAR) [tmdbid-ID]'. The tmdbid field is optional.", extra)
+}
+
+// parseArgs returns the title, year, year tolerance and tmdbid.
+// title and year are first tried from flags.
+// If no title can be found from flags or year is wrong, try from cwd name.
+// If no tmdbid is found in cwd name, returns 0.
+func parseArgs(cmd *cobra.Command) (string, int, int, int) {
+	var tmdbId int
 	title, err := cmd.Flags().GetString("title")
 	if err != nil {
 		log.Fatalln(" Couldn't read title flag from config")
@@ -29,32 +38,6 @@ func parseArgs(cmd *cobra.Command) (string, int, int) {
 	year, err := cmd.Flags().GetInt("year")
 	if err != nil {
 		log.Fatalln(" Couldn't read year flag from config")
-	}
-	// we assume a year before the invention of cinema or later than 10y in the future is wrong.
-	isWrongYear := func(year int) bool { return year <= 1800 || year >= time.Now().Year()+10 }
-	if title == "" || isWrongYear(year) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			log.Fatalln(" Wrong args: title is empty or year is wrong and I can't get the cwd")
-		}
-		fmt.Println("Reading info from current dir name")
-		basePath := path.Base(cwd)
-		fields := strings.Fields(basePath)
-		if len(fields) < 2 {
-			log.Fatalln(" Cwd name is badly formatted, must be 'TITLE (YEAR)'")
-		}
-		title = strings.Join(fields[:len(fields)-1], " ")
-		lastField := fields[len(fields)-1]
-		if currentYear := time.Now().Year(); len(lastField) <= 2 || len(lastField)-2 != len(strconv.Itoa(currentYear)) {
-			log.Fatalf(" Year has a wrong amount of digits, its %v and you gave %v\n", currentYear, lastField)
-		}
-		yearString := lastField[1 : len(lastField)-1]
-		year, err = strconv.Atoi(yearString)
-		if err != nil {
-			log.Fatalln(" Cwd name is badly formatted, must be 'TITLE (YEAR)'")
-		} else if isWrongYear(year) {
-			log.Fatalf(" Year must be between %v and %v\n", 1800, time.Now().Year()+10)
-		}
 	}
 	tolerance, err := cmd.Flags().GetInt("tolerance")
 	if err != nil {
@@ -64,7 +47,36 @@ func parseArgs(cmd *cobra.Command) (string, int, int) {
 		tolerance = localConfig.DefaultTolerance
 		log.Printf(" Tolerance should be between 0 and 5 inclusive. Using %v\n", tolerance)
 	}
-	return title, year, tolerance
+	// we assume a year before the invention of cinema or later than 10y in the future is wrong.
+	isWrongYear := func(year int) bool { return year <= 1800 || year >= time.Now().Year()+10 }
+	if title == "" || isWrongYear(year) {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatalln(" Wrong args: title is empty or year is wrong, and I can't get the cwd")
+		}
+		fmt.Println("Reading info from current folder name")
+		basePath := path.Base(cwd)
+		var re = regexp.MustCompile(`(.*) \((\d{4})\)( \[tmdbid-(\d+)\])?`)
+		fields := re.FindStringSubmatch(basePath)
+		if fields == nil || len(fields) <= 1 {
+			cwdFormatError("")
+		}
+		title = fields[1]
+		yearString := fields[2]
+		if len(fields) == 5 {
+			tmdbId, err = strconv.Atoi(fields[4])
+			if err != nil {
+				cwdFormatError(fmt.Sprintf("Couldn't parse tmdbid %v to an int.", fields[4]))
+			}
+		}
+		year, err = strconv.Atoi(yearString)
+		if err != nil {
+			cwdFormatError(fmt.Sprintf("Couldn't parse year %v to an int", yearString))
+		} else if isWrongYear(year) {
+			log.Fatalf(" Year must be between %v and %v\n", 1800, time.Now().Year()+10)
+		}
+	}
+	return title, year, tolerance, tmdbId
 }
 
 // findYearMatch finds the first element of media whose year (given by GetYear()) is minimum.
@@ -126,7 +138,7 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 			5 check db before writing the match if user accepts
 		*/
 		// 1
-		title, year, tolerance := parseArgs(cmd)
+		title, year, tolerance, _ := parseArgs(cmd)
 		// 2
 		if localConfig.DBH.CheckDB(title, year, tolerance, debug) {
 			utils.AcceptOrQuit("Proceed to online lookup?")
