@@ -63,10 +63,10 @@ func parseArgs(cmd *cobra.Command) (string, int, int, int) {
 		}
 		title = fields[1]
 		yearString := fields[2]
-		if len(fields) == 5 {
+		if len(fields) == 5 && fields[4] != "" {
 			tmdbId, err = strconv.Atoi(fields[4])
 			if err != nil {
-				cwdFormatError(fmt.Sprintf("Couldn't parse tmdbid %v to an int.", fields[4]))
+				cwdFormatError(fmt.Sprintf("Couldn't parse tmdbid '%v' to an int. Parsing provided fields %v", fields[4], fields))
 			}
 		}
 		year, err = strconv.Atoi(yearString)
