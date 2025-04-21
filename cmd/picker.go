@@ -37,18 +37,10 @@ External dependencies: fold, kitty
 				if director != "" {
 					director = " -- " + director
 				}
-				s := fmt.Sprintf("%v\t%v (%v)%v\t%v\t%v\t%v", title, title, year, director, overview, id, path)
+				s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v", title, fmt.Sprintf("%v (%v)%v", title, year, director), overview, id, path)
 				inputChan <- s
 			}
 			close(inputChan)
-		}()
-
-		outputChan := make(chan string)
-		go func() {
-			for s := range outputChan {
-				// path := strings.FieldsFunc(s, func(r rune) bool { return r == '\t' })[4]
-				fmt.Println(s)
-			}
 		}()
 
 		exit := func(code int, err error) {
@@ -58,13 +50,17 @@ External dependencies: fold, kitty
 			os.Exit(code)
 		}
 
-		cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1", "--accept-nth=5"}
+		cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1", "--accept-nth=-1"}
 
+		// Use sqlite3 cli extension to temporarily write poster image data to disk
 		posterFilePath := "/tmp/mymedia_poster.jpg"
 		query := fmt.Sprintf(`SELECT writefile("%v", poster) FROM media WHERE id={-2}`, posterFilePath)
+		// On focus of a line, execute the above sqlite query
 		cmdLineOptions = append(cmdLineOptions, `--bind=focus:execute-silent(sqlite3 `+localConfig.DBH.Path+` '`+query+`')`)
+		// Preview window setup
 		previewCmd := "echo {2};echo;echo {3}|fold -w ${FZF_PREVIEW_COLUMNS} -s;COLS=$((LINES*2/3));kitten icat --clear --transfer-mode=memory --stdin=no --unicode-placeholder --place=${COLS}x${FZF_PREVIEW_LINES}@0x0 " + posterFilePath
 		cmdLineOptions = append(cmdLineOptions, "--preview="+previewCmd)
+
 		// Build fzf.Options
 		options, err := fzf.ParseOptions(
 			true, // whether to load defaults ($FZF_DEFAULT_OPTS_FILE and $FZF_DEFAULT_OPTS)
@@ -76,7 +72,6 @@ External dependencies: fold, kitty
 
 		// Set up input and output channels
 		options.Input = inputChan
-		options.Output = outputChan
 
 		// Run fzf
 		code, err := fzf.Run(options)
