@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -47,8 +46,8 @@ External dependencies: fold, kitty
 		outputChan := make(chan string)
 		go func() {
 			for s := range outputChan {
-				path := strings.FieldsFunc(s, func(r rune) bool { return r == '\t' })[4]
-				fmt.Println(path)
+				// path := strings.FieldsFunc(s, func(r rune) bool { return r == '\t' })[4]
+				fmt.Println(s)
 			}
 		}()
 
@@ -59,7 +58,7 @@ External dependencies: fold, kitty
 			os.Exit(code)
 		}
 
-		cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1"}
+		cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1", "--accept-nth=5"}
 
 		posterFilePath := "/tmp/mymedia_poster.jpg"
 		query := fmt.Sprintf(`SELECT writefile("%v", poster) FROM media WHERE id={-2}`, posterFilePath)
