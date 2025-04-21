@@ -37,8 +37,16 @@ External dependencies: fold, kitty
 				if director != "" {
 					director = " -- " + director
 				}
-				s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v", title, fmt.Sprintf("%v (%v)%v", title, year, director), overview, id, path)
-				inputChan <- s
+				infoLine := fmt.Sprintf("%v (%v)%v", title, year, director)
+				// TODO: use that folder mod time to influence sorting, see fzf docs
+				fileStat, err := os.Stat(path) // WARN: missing records are ignored
+				if err != nil {
+					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v", title, infoLine, overview, id, path, 0)
+					inputChan <- s
+				} else {
+					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%s", title, infoLine, overview, id, path, fileStat.ModTime())
+					inputChan <- s
+				}
 			}
 			close(inputChan)
 		}()
@@ -50,11 +58,11 @@ External dependencies: fold, kitty
 			os.Exit(code)
 		}
 
-		cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1", "--accept-nth=-1"}
+		cmdLineOptions := []string{"--delimiter=\\t", "--with-nth=1", "--accept-nth=-2"}
 
 		// Use sqlite3 cli extension to temporarily write poster image data to disk
 		posterFilePath := "/tmp/mymedia_poster.jpg"
-		query := fmt.Sprintf(`SELECT writefile("%v", poster) FROM media WHERE id={-2}`, posterFilePath)
+		query := fmt.Sprintf(`SELECT writefile("%v", poster) FROM media WHERE id={-3}`, posterFilePath)
 		// On focus of a line, execute the above sqlite query
 		cmdLineOptions = append(cmdLineOptions, `--bind=focus:execute-silent(sqlite3 `+localConfig.DBH.Path+` '`+query+`')`)
 		// Preview window setup
