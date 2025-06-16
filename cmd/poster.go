@@ -46,13 +46,11 @@ var posterCmd = &cobra.Command{
 			}
 			title = strings.Join(fields[:len(fields)-1], " ")
 		}
-		query := "SELECT poster FROM media WHERE LOWER(media.title)=LOWER(?)"
-		row := localConfig.DBH.DB.QueryRow(query, title)
-		var poster []byte
-		if err := row.Scan(&poster); err != nil {
+		poster, err := queries.GetPoster(ctx, title)
+		if err != nil {
 			log.Fatalf(" Couldn't get the poster from db for «%v»: %v", title, err)
 		}
-		img, _, err := image.Decode(bytes.NewReader(poster))
+		img, _, err := image.Decode(bytes.NewReader(poster.([]byte)))
 		if err != nil {
 			log.Fatalf(" Couldn't decode the poster for «%v»: %v", title, err)
 		}

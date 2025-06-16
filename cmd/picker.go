@@ -23,28 +23,22 @@ External dependencies: fold, kitty
 
 		inputChan := make(chan string)
 		go func() {
-			query := "SELECT title, year, overview, director, id, path FROM media ORDER BY title, year ASC"
-			rows, err := localConfig.DBH.DB.Query(query)
+			results, err := queries.ListMedia(ctx)
 			if err != nil {
 				log.Fatal("Query error : ", err)
 			}
-			for rows.Next() {
-				var title, overview, director, path string
-				var year, id int
-				if err := rows.Scan(&title, &year, &overview, &director, &id, &path); err != nil {
-					log.Fatal(err)
+			for _, result := range results {
+				if result.Director.Valid && result.Director.String != "" {
+					result.Director.String = " — " + result.Director.String
 				}
-				if director != "" {
-					director = " -- " + director
-				}
-				infoLine := fmt.Sprintf("%v (%v)%v", title, year, director)
+				infoLine := fmt.Sprintf("%v (%v)%v", result.Title, result.Year, result.Director.String)
 				// TODO: use that folder mod time to influence sorting, see fzf docs
-				fileStat, err := os.Stat(path) // WARN: missing records are ignored
+				fileStat, err := os.Stat(result.Path) // WARN: missing records are ignored
 				if err != nil {
-					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v", title, infoLine, overview, id, path, 0)
+					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v", result.Title, infoLine, result.Overview, result.ID, result.Path, 0)
 					inputChan <- s
 				} else {
-					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%s", title, infoLine, overview, id, path, fileStat.ModTime())
+					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%s", result.Title, infoLine, result.Overview, result.ID, result.Path, fileStat.ModTime())
 					inputChan <- s
 				}
 			}
@@ -64,7 +58,7 @@ External dependencies: fold, kitty
 		posterFilePath := "/tmp/mymedia_poster.jpg"
 		query := fmt.Sprintf(`SELECT writefile("%v", poster) FROM media WHERE id={-3}`, posterFilePath)
 		// On focus of a line, execute the above sqlite query
-		cmdLineOptions = append(cmdLineOptions, `--bind=focus:execute-silent(sqlite3 `+localConfig.DBH.Path+` '`+query+`')`)
+		cmdLineOptions = append(cmdLineOptions, `--bind=focus:execute-silent(sqlite3 `+localConfig.Path+` '`+query+`')`)
 		// Preview window setup
 		previewCmd := "echo {2};echo;echo {3}|fold -w ${FZF_PREVIEW_COLUMNS} -s;COLS=$((LINES*2/3));kitten icat --clear --transfer-mode=memory --stdin=no --unicode-placeholder --place=${COLS}x${FZF_PREVIEW_LINES}@0x0 " + posterFilePath
 		cmdLineOptions = append(cmdLineOptions, "--preview="+previewCmd)

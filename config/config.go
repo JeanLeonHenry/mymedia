@@ -6,18 +6,17 @@ import (
 	"os"
 	"path"
 
-	"github.com/JeanLeonHenry/mymedia/internal/db"
 	"github.com/profclems/go-dotenv"
 )
 
 type Config struct {
-	DBH              *db.DBHandler
 	DefaultTolerance int
 	// ApiUrl           string
 	// ImageApiUrl      string
 	ApiReadToken string
 	ApiKey       string
 	IsValid      bool
+	Path         string
 }
 
 func New() *Config {
@@ -28,9 +27,9 @@ func New() *Config {
 	}
 
 	return &Config{
-		DBH:              db.NewDB(dbPath),
 		DefaultTolerance: 2,
 		IsValid:          true,
+		Path:             dbPath,
 	}
 
 }

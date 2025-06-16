@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"cmp"
+	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +14,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/JeanLeonHenry/mymedia/db"
 	"github.com/JeanLeonHenry/mymedia/internal/api"
 	"github.com/JeanLeonHenry/mymedia/internal/utils"
 	"github.com/go-playground/validator/v10"
@@ -118,6 +122,25 @@ func validateResults(validate *validator.Validate, results []api.Media) (validRe
 	return
 }
 
+func checkDB(q *db.Queries, c context.Context, title string, year int, tolerance int, debug bool) bool {
+	results, err := q.LookUpMedia(c, db.LookUpMediaParams{
+		Title:     title,
+		Year:      int64(year),
+		Tolerance: int64(tolerance),
+	})
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Fatal(" Query error: ", err)
+		}
+		// found no match, check is complete
+		return false
+	}
+	for result := range results {
+		fmt.Printf("✓ Found %v in DB.\n", result)
+	}
+	return true
+}
+
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan",
@@ -140,7 +163,7 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 		// 1
 		title, year, tolerance, _ := parseArgs(cmd)
 		// 2
-		if localConfig.DBH.CheckDB(title, year, tolerance, debug) {
+		if checkDB(queries, ctx, title, year, tolerance, debug) {
 			utils.AcceptOrQuit("Proceed to online lookup?")
 		}
 		// 3
@@ -167,14 +190,27 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 		}
 		fmt.Printf("✓ Found TMDB.org match for «%v» (%v): %v\n", title, year, out)
 		// 5
-		localConfig.DBH.CheckDB(media.GetTitle(), media.GetYear(), tolerance, debug)
+		checkDB(queries, ctx, media.GetTitle(), media.GetYear(), tolerance, debug)
 		utils.AcceptOrQuit("Write to DB ?")
 		media.GetDirector(localConfig.ApiReadToken)
 		media.GetPoster(localConfig.ApiKey)
-		if cwdPath, err := os.Getwd(); err != nil {
-			log.Fatalln(" Couldn't get current dir path")
-		} else {
-			_, err := localConfig.DBH.WriteToDB(media, cwdPath)
+		if cwdPath, err := os.Getwd(); err == nil {
+			err := queries.InsertOrReplaceMedia(ctx, db.InsertOrReplaceMediaParams{
+				ID:        int64(media.ID),
+				MediaType: media.MediaType,
+				Title:     media.Title,
+				Year:      int64(media.GetYear()),
+				Overview: sql.NullString{
+					String: media.Overview,
+					Valid:  media.Overview != "",
+				},
+				Director: sql.NullString{
+					String: media.Director,
+					Valid:  media.Director != "",
+				},
+				Poster: media.PosterData,
+				Path:   cwdPath,
+			})
 			if err != nil {
 				log.Fatalln(" DB write error: ", err)
 			}
@@ -182,6 +218,8 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 			if debug {
 				fmt.Println("Tried writing/Wrote: ", media.Dump())
 			}
+		} else {
+			log.Fatalln(" Couldn't get current dir path")
 		}
 		if debug {
 			fmt.Println("-- DUMP --")

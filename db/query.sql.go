@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const getPoster = `-- name: GetPoster :one
@@ -21,9 +22,39 @@ func (q *Queries) GetPoster(ctx context.Context, title string) (interface{}, err
 	return poster, err
 }
 
+const insertOrReplaceMedia = `-- name: InsertOrReplaceMedia :exec
+INSERT OR REPLACE INTO media(id, media_type, title, year, overview, director, poster, path)
+VALUES(?,?,?,?,?,?,?,?)
+`
+
+type InsertOrReplaceMediaParams struct {
+	ID        int64
+	MediaType string
+	Title     string
+	Year      int64
+	Overview  sql.NullString
+	Director  sql.NullString
+	Poster    interface{}
+	Path      string
+}
+
+func (q *Queries) InsertOrReplaceMedia(ctx context.Context, arg InsertOrReplaceMediaParams) error {
+	_, err := q.db.ExecContext(ctx, insertOrReplaceMedia,
+		arg.ID,
+		arg.MediaType,
+		arg.Title,
+		arg.Year,
+		arg.Overview,
+		arg.Director,
+		arg.Poster,
+		arg.Path,
+	)
+	return err
+}
+
 const listMedia = `-- name: ListMedia :many
 SELECT id, media_type, title, year, overview, director, poster, path FROM media
-ORDER BY title, year ASC
+ORDER BY concat(year, '-01-01') DESC, title ASC
 `
 
 func (q *Queries) ListMedia(ctx context.Context) ([]Medium, error) {

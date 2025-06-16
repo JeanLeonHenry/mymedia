@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"fmt"
-	"log"
+	"context"
 	"os"
 	"time"
 
 	"github.com/JeanLeonHenry/mymedia/config"
+	"github.com/JeanLeonHenry/mymedia/db"
 	"github.com/spf13/cobra"
 )
 
@@ -14,14 +14,16 @@ import (
 var rootCmd = &cobra.Command{
 	Use:     "mymedia",
 	Short:   "Build and query a media library.",
-	Long:    ``,
 	Version: time.Now().Format(time.DateTime),
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
-var localConfig *config.Config
+
 var debug bool
+var localConfig *config.Config
+var queries *db.Queries
+var ctx context.Context
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -32,13 +34,13 @@ func Execute() {
 	}
 }
 
+func InitCLI(q *db.Queries, c context.Context, cfg *config.Config) {
+	queries = q
+	ctx = c
+	localConfig = cfg
+}
+
 func init() {
-	localConfig = config.New()
-	localConfig.Check()
-	msg := fmt.Sprintf("Was config valid ? %v\nConfig was : %+v", localConfig.IsValid, localConfig)
-	if !localConfig.IsValid {
-		log.Fatal(msg)
-	}
 	// NOTE: use viper for better config handling ?
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
