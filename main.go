@@ -28,7 +28,6 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Printf("using %v as db", cfg.Path)
 
 	// INFO: will create the tables if they don't exist
 	if _, err := DB.ExecContext(ctx, ddl); err != nil {
