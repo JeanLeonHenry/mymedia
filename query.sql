@@ -21,6 +21,11 @@ WHERE LOWER(media.title)=LOWER(sqlc.arg(title)) AND ABS(media.year-sqlc.arg(year
 INSERT OR REPLACE INTO media(id, media_type, title, year, overview, director, poster, path)
 VALUES(?,?,?,?,?,?,?,?);
 
+-- name: UpdatePath :exec
+UPDATE media
+SET path = ?
+WHERE id = ?;
+
 -- name: DeleteMedia :exec
 DELETE FROM media
 WHERE path = ?;

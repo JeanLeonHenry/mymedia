@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/JeanLeonHenry/mymedia/db"
 	"github.com/JeanLeonHenry/mymedia/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +22,18 @@ var cleanCmd = &cobra.Command{
 		for _, result := range results {
 			if _, err := os.Stat(result.Path); err != nil {
 				fmt.Println(utils.Bad("Path %v is not valid : %v.", result.Path, err))
-				// TODO: search for alternative paths in case user renamed the folder
+				replacementPath, err := utils.AskUserForAPath("Provide a replacement path : ")
+				if err == nil {
+					err := queries.UpdatePath(ctx, db.UpdatePathParams{
+						Path: replacementPath,
+						ID:   result.ID,
+					})
+					if err != nil {
+						log.Printf("Couldn't update the path at media id %v\nGot : %v", result.ID, err)
+					}
+					continue
+				}
+				fmt.Println(utils.Bad("%v", err))
 				forceFlag, _ := cmd.Flags().GetBool("force")
 				doIt := true
 				if !forceFlag {

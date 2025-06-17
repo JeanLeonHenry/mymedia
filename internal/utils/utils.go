@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 )
 
@@ -37,4 +38,15 @@ func AskUser(prompt string) bool {
 		return false
 	}
 	return true
+}
+func AskUserForAPath(prompt string) (string, error) {
+	fmt.Print(prompt)
+	var userInput string
+	if _, err := fmt.Scanln(&userInput); err != nil {
+		return "", err
+	}
+	if !fs.ValidPath(userInput) {
+		return "", fmt.Errorf("Input '%v' isn't a valid path.", userInput)
+	}
+	return userInput, nil
 }

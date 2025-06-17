@@ -177,3 +177,19 @@ func (q *Queries) LookUpMedia(ctx context.Context, arg LookUpMediaParams) ([]Med
 	}
 	return items, nil
 }
+
+const updatePath = `-- name: UpdatePath :exec
+UPDATE media
+SET path = ?
+WHERE id = ?
+`
+
+type UpdatePathParams struct {
+	Path string
+	ID   int64
+}
+
+func (q *Queries) UpdatePath(ctx context.Context, arg UpdatePathParams) error {
+	_, err := q.db.ExecContext(ctx, updatePath, arg.Path, arg.ID)
+	return err
+}
