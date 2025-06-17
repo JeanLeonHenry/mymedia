@@ -20,6 +20,8 @@ var cleanCmd = &cobra.Command{
 		}
 		for _, result := range results {
 			if _, err := os.Stat(result.Path); err != nil {
+				fmt.Println(utils.Bad("Path %v is not valid : %v.", result.Path, err))
+				// TODO: search for alternative paths in case user renamed the folder
 				forceFlag, _ := cmd.Flags().GetBool("force")
 				doIt := true
 				if !forceFlag {
@@ -30,7 +32,7 @@ var cleanCmd = &cobra.Command{
 					if err != nil {
 						log.Println(err)
 					} else {
-						fmt.Println(utils.Good(fmt.Sprintf("Deleted media at path %v", result.Path)))
+						fmt.Println(utils.Good("Deleted media at path %v", result.Path))
 					}
 				}
 			}

@@ -5,11 +5,13 @@ import (
 	"os"
 )
 
-func Bad(msg string) string {
+func Bad(format string, a ...any) string {
+	msg := fmt.Sprintf(format, a...)
 	return fmt.Sprint(" ", msg)
 }
 
-func Good(msg string) string {
+func Good(format string, a ...any) string {
+	msg := fmt.Sprintf(format, a...)
 	return fmt.Sprint("✓ ", msg)
 }
 
