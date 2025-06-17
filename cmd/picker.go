@@ -34,11 +34,17 @@ External dependencies: fold, kitty
 				infoLine := fmt.Sprintf("%v (%v)%v", result.Title, result.Year, result.Director.String)
 				// TODO: use that folder mod time to influence sorting, see fzf docs
 				fileStat, err := os.Stat(result.Path) // WARN: missing records are ignored
+				var overview string
+				if !result.Overview.Valid {
+					overview = "No overview available."
+				} else {
+					overview = result.Overview.String
+				}
 				if err != nil {
-					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v", result.Title, infoLine, result.Overview, result.ID, result.Path, 0)
+					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v", result.Title, infoLine, overview, result.ID, result.Path, 0)
 					inputChan <- s
 				} else {
-					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%s", result.Title, infoLine, result.Overview, result.ID, result.Path, fileStat.ModTime())
+					s := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%s", result.Title, infoLine, overview, result.ID, result.Path, fileStat.ModTime())
 					inputChan <- s
 				}
 			}

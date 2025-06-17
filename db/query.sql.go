@@ -10,6 +10,16 @@ import (
 	"database/sql"
 )
 
+const deleteMedia = `-- name: DeleteMedia :exec
+DELETE FROM media
+WHERE path = ?
+`
+
+func (q *Queries) DeleteMedia(ctx context.Context, path string) error {
+	_, err := q.db.ExecContext(ctx, deleteMedia, path)
+	return err
+}
+
 const getPoster = `-- name: GetPoster :one
 SELECT poster FROM media
 WHERE LOWER(media.title)=LOWER(?1)
@@ -23,6 +33,7 @@ func (q *Queries) GetPoster(ctx context.Context, title string) (interface{}, err
 }
 
 const insertOrReplaceMedia = `-- name: InsertOrReplaceMedia :exec
+
 INSERT OR REPLACE INTO media(id, media_type, title, year, overview, director, poster, path)
 VALUES(?,?,?,?,?,?,?,?)
 `
@@ -38,6 +49,7 @@ type InsertOrReplaceMediaParams struct {
 	Path      string
 }
 
+// WRITES --
 func (q *Queries) InsertOrReplaceMedia(ctx context.Context, arg InsertOrReplaceMediaParams) error {
 	_, err := q.db.ExecContext(ctx, insertOrReplaceMedia,
 		arg.ID,
@@ -53,10 +65,12 @@ func (q *Queries) InsertOrReplaceMedia(ctx context.Context, arg InsertOrReplaceM
 }
 
 const listMedia = `-- name: ListMedia :many
+
 SELECT id, media_type, title, year, overview, director, poster, path FROM media
 ORDER BY concat(year, '-01-01') DESC, title ASC
 `
 
+// READS --
 func (q *Queries) ListMedia(ctx context.Context) ([]Medium, error) {
 	rows, err := q.db.QueryContext(ctx, listMedia)
 	if err != nil {
@@ -76,6 +90,38 @@ func (q *Queries) ListMedia(ctx context.Context) ([]Medium, error) {
 			&i.Poster,
 			&i.Path,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPaths = `-- name: ListPaths :many
+SELECT id, path FROM media
+`
+
+type ListPathsRow struct {
+	ID   int64
+	Path string
+}
+
+func (q *Queries) ListPaths(ctx context.Context) ([]ListPathsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPaths)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPathsRow
+	for rows.Next() {
+		var i ListPathsRow
+		if err := rows.Scan(&i.ID, &i.Path); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
