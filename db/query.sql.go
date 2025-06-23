@@ -33,7 +33,6 @@ func (q *Queries) GetPoster(ctx context.Context, title string) (interface{}, err
 }
 
 const insertOrReplaceMedia = `-- name: InsertOrReplaceMedia :exec
-
 INSERT OR REPLACE INTO media(id, media_type, title, year, overview, director, poster, path)
 VALUES(?,?,?,?,?,?,?,?)
 `
@@ -49,7 +48,6 @@ type InsertOrReplaceMediaParams struct {
 	Path      string
 }
 
-// WRITES --
 func (q *Queries) InsertOrReplaceMedia(ctx context.Context, arg InsertOrReplaceMediaParams) error {
 	_, err := q.db.ExecContext(ctx, insertOrReplaceMedia,
 		arg.ID,
@@ -65,12 +63,10 @@ func (q *Queries) InsertOrReplaceMedia(ctx context.Context, arg InsertOrReplaceM
 }
 
 const listMedia = `-- name: ListMedia :many
-
 SELECT id, media_type, title, year, overview, director, poster, path FROM media
 ORDER BY concat(year, '-01-01') DESC, title ASC
 `
 
-// READS --
 func (q *Queries) ListMedia(ctx context.Context) ([]Medium, error) {
 	rows, err := q.db.QueryContext(ctx, listMedia)
 	if err != nil {
