@@ -198,7 +198,7 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 			err := queries.InsertOrReplaceMedia(ctx, db.InsertOrReplaceMediaParams{
 				ID:        int64(media.ID),
 				MediaType: media.MediaType,
-				Title:     media.Title,
+				Title:     media.GetTitle(),
 				Year:      int64(media.GetYear()),
 				Overview: sql.NullString{
 					String: media.Overview,
@@ -222,8 +222,7 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 			log.Fatalln(" Couldn't get current dir path")
 		}
 		if debug {
-			fmt.Println("-- DUMP --")
-			fmt.Println("Dumping config")
+			fmt.Println("-- CONFIG DUMP --")
 			fmt.Println(localConfig)
 		}
 	},
