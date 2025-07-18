@@ -25,6 +25,7 @@ const validationErrorMessage = `Field      %20v
 Failed     %20v =%v
 Got        %20v (type %v, kind %v)` + "\n"
 
+// currentDirFormatError calls log.Falln with a message about proper formatting.
 func currentDirFormatError(extra string) {
 	log.Fatalln(" Cwd name is badly formatted, must be 'TITLE (YEAR) [tmdbid-ID]'. The tmdbid field is optional.", extra)
 }
@@ -32,9 +33,9 @@ func currentDirFormatError(extra string) {
 // parseArgs returns the title, year, year tolerance and tmdbid.
 // title and year are first tried from flags.
 // If no title can be found from flags or year is wrong, try from cwd name.
-// If no tmdbid is found in cwd name, returns 0.
+// If no tmdbid is found in cwd name, returns -1.
 func parseArgs(cmd *cobra.Command) (string, int, int, int) {
-	var tmdbId int
+	tmdbId := -1
 	title, err := cmd.Flags().GetString("title")
 	if err != nil {
 		log.Fatalln(" Couldn't read title flag from config")
@@ -72,6 +73,9 @@ func parseArgs(cmd *cobra.Command) (string, int, int, int) {
 			if err != nil {
 				currentDirFormatError(fmt.Sprintf("Couldn't parse tmdbid '%v' to an int. Parsing provided fields %v", fields[4], fields))
 			}
+			if tmdbId <= 0 {
+				currentDirFormatError(fmt.Sprintf("Provided tmdbid '%v' is negative.", tmdbId))
+			}
 		}
 		year, err = strconv.Atoi(yearString)
 		if err != nil {
@@ -83,20 +87,21 @@ func parseArgs(cmd *cobra.Command) (string, int, int, int) {
 	return title, year, tolerance, tmdbId
 }
 
-// findYearMatch finds the first element of media whose year (given by GetYear()) is minimum.
-// If that isn't with tolerance of year, found is false.
+// findMatch finds the first element of media whose distance to year is minimum.
+// If that's not within tolerance, found is false.
+// If it is and tmdbId is positive then found is true if the ids match.
+// Otherwise, found is true.
 // Panics if media is empty.
-func findYearMatch(mediaSlice []api.Media, year int, tolerance int) (result api.Media, found bool) {
+func findMatch(mediaSlice []api.Media, year int, tolerance int, tmdbId int) (result api.Media, found bool) {
 	distanceToRef := func(x int) int { return utils.Abs(x - year) }
 	// INFO: panics if mediaSlice is empty
 	result = slices.MinFunc(mediaSlice, func(a, b api.Media) int {
 		yearA, yearB := a.GetYear(), b.GetYear()
 		return cmp.Compare(distanceToRef(yearA), distanceToRef(yearB))
 	})
-	if distanceToRef(result.GetYear()) > tolerance {
-		return result, false
-	}
-	return result, true
+	isYearWithinTol := distanceToRef(result.GetYear()) <= tolerance
+	tmdbIdMatches := tmdbId <= 0 || result.ID == tmdbId
+	return result, isYearWithinTol && tmdbIdMatches
 }
 
 func validateResults(validate *validator.Validate, results []api.Media) (validResults []api.Media) {
@@ -166,7 +171,7 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 		// FIX: if the title contains a tmdbid, it should be used in the API poll
 
 		// 1
-		title, year, tolerance, _ := parseArgs(cmd)
+		title, year, tolerance, tmdbId := parseArgs(cmd)
 		// 2
 		if checkDB(queries, ctx, title, year, tolerance, debug) {
 			utils.AcceptOrQuit("Proceed to online lookup?")
@@ -180,18 +185,14 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 			return
 		}
 		// 4
-		media, ok := findYearMatch(validResults, year, tolerance)
-		if !ok {
-			out := media.String()
-			if debug {
-				out = media.Dump()
-			}
-			fmt.Printf("∅ Found no match for «%v» (%v).\nClosest match was : %+v\n", title, year, out)
-			return
-		}
+		media, ok := findMatch(validResults, year, tolerance, tmdbId)
 		out := media.String()
 		if debug {
 			out = media.Dump()
+		}
+		if !ok {
+			fmt.Printf("∅ Found no match for «%v» (%v).\nClosest match was : %+v\n", title, year, out)
+			return
 		}
 		fmt.Printf("✓ Found TMDB.org match for «%v» (%v): %v\n", title, year, out)
 		// 5
