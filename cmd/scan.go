@@ -25,7 +25,7 @@ const validationErrorMessage = `Field      %20v
 Failed     %20v =%v
 Got        %20v (type %v, kind %v)` + "\n"
 
-func cwdFormatError(extra string) {
+func currentDirFormatError(extra string) {
 	log.Fatalln(" Cwd name is badly formatted, must be 'TITLE (YEAR) [tmdbid-ID]'. The tmdbid field is optional.", extra)
 }
 
@@ -63,19 +63,19 @@ func parseArgs(cmd *cobra.Command) (string, int, int, int) {
 		var re = regexp.MustCompile(`(.*) \((\d{4})\)( \[tmdbid-(\d+)\])?`)
 		fields := re.FindStringSubmatch(basePath)
 		if fields == nil || len(fields) <= 1 {
-			cwdFormatError("")
+			currentDirFormatError("")
 		}
 		title = fields[1]
 		yearString := fields[2]
 		if len(fields) == 5 && fields[4] != "" {
 			tmdbId, err = strconv.Atoi(fields[4])
 			if err != nil {
-				cwdFormatError(fmt.Sprintf("Couldn't parse tmdbid '%v' to an int. Parsing provided fields %v", fields[4], fields))
+				currentDirFormatError(fmt.Sprintf("Couldn't parse tmdbid '%v' to an int. Parsing provided fields %v", fields[4], fields))
 			}
 		}
 		year, err = strconv.Atoi(yearString)
 		if err != nil {
-			cwdFormatError(fmt.Sprintf("Couldn't parse year %v to an int", yearString))
+			currentDirFormatError(fmt.Sprintf("Couldn't parse year %v to an int", yearString))
 		} else if isWrongYear(year) {
 			log.Fatalf(" Year must be between %v and %v\n", 1800, time.Now().Year()+10)
 		}
@@ -88,6 +88,7 @@ func parseArgs(cmd *cobra.Command) (string, int, int, int) {
 // Panics if media is empty.
 func findYearMatch(mediaSlice []api.Media, year int, tolerance int) (result api.Media, found bool) {
 	distanceToRef := func(x int) int { return utils.Abs(x - year) }
+	// INFO: panics if mediaSlice is empty
 	result = slices.MinFunc(mediaSlice, func(a, b api.Media) int {
 		yearA, yearB := a.GetYear(), b.GetYear()
 		return cmp.Compare(distanceToRef(yearA), distanceToRef(yearB))
@@ -122,6 +123,8 @@ func validateResults(validate *validator.Validate, results []api.Media) (validRe
 	return
 }
 
+// checkDB looks for a media in db with same title and year within tolerance of given year.
+// title are compared in lowercase
 func checkDB(q *db.Queries, c context.Context, title string, year int, tolerance int, debug bool) bool {
 	results, err := q.LookUpMedia(c, db.LookUpMediaParams{
 		Title:     title,
@@ -160,6 +163,8 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 			4 find a reasonnable match in the results
 			5 check db before writing the match if user accepts
 		*/
+		// FIX: if the title contains a tmdbid, it should be used in the API poll
+
 		// 1
 		title, year, tolerance, _ := parseArgs(cmd)
 		// 2
