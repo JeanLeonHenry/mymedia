@@ -87,12 +87,17 @@ func parseArgs(cmd *cobra.Command) (string, int, int, int) {
 	return title, year, tolerance, tmdbId
 }
 
-// findMatch finds the first element of media whose distance to year is minimum.
-// If that's not within tolerance, found is false.
-// If it is and tmdbId is positive then found is true if the ids match.
-// Otherwise, found is true.
-// Panics if media is empty.
 func findMatch(mediaSlice []api.Media, year int, tolerance int, tmdbId int) (result api.Media, found bool) {
+	// if tmdbid provided, try that first
+	if tmdbId > 0 {
+		idDiff := func(a, b api.Media) int { return b.ID - a.ID }
+		slices.SortFunc(mediaSlice, idDiff)
+		matchPos, ok := slices.BinarySearchFunc(mediaSlice, tmdbId, func(m api.Media, t int) int { return m.ID - t })
+		if ok {
+			return mediaSlice[matchPos], true
+		}
+	}
+	// if not provided, or can't find a match, rely on title+year
 	distanceToRef := func(x int) int { return utils.Abs(x - year) }
 	// INFO: panics if mediaSlice is empty
 	result = slices.MinFunc(mediaSlice, func(a, b api.Media) int {
@@ -100,8 +105,7 @@ func findMatch(mediaSlice []api.Media, year int, tolerance int, tmdbId int) (res
 		return cmp.Compare(distanceToRef(yearA), distanceToRef(yearB))
 	})
 	isYearWithinTol := distanceToRef(result.GetYear()) <= tolerance
-	tmdbIdMatches := tmdbId <= 0 || result.ID == tmdbId
-	return result, isYearWithinTol && tmdbIdMatches
+	return result, isYearWithinTol
 }
 
 func validateResults(validate *validator.Validate, results []api.Media) (validResults []api.Media) {
