@@ -172,6 +172,12 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 
 		// 1
 		title, year, tolerance, tmdbId := parseArgs(cmd)
+		yearString := strconv.Itoa(year) + "-01-01"
+		mockMedia := api.Media{
+			ID:          tmdbId,
+			Title:       title,
+			ReleaseDate: yearString,
+		}
 		// 2
 		if checkDB(queries, ctx, title, year, tolerance, debug) {
 			utils.AcceptOrQuit("Proceed to online lookup?")
@@ -181,7 +187,7 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 		validate := validator.New(validator.WithRequiredStructEnabled())
 		validResults := validateResults(validate, response.Results)
 		if len(validResults) == 0 {
-			fmt.Printf("∅ Found no match for «%v» (%v).\n", title, year)
+			fmt.Printf("∅ Found no match for %v.\n", mockMedia)
 			return
 		}
 		// 4
@@ -191,10 +197,10 @@ If the result is wrong, use the -t and -y flags to make lookup more accurate, es
 			out = media.Dump()
 		}
 		if !ok {
-			fmt.Printf("∅ Found no match for «%v» (%v).\nClosest match was : %+v\n", title, year, out)
+			fmt.Printf("∅ Found no match for %v.\nClosest match was : %+v\n", mockMedia, out)
 			return
 		}
-		fmt.Printf("✓ Found TMDB.org match for «%v» (%v): %v\n", title, year, out)
+		fmt.Printf("✓ Found TMDB.org match for %v: %v\n", mockMedia, out)
 		// 5
 		checkDB(queries, ctx, media.GetTitle(), media.GetYear(), tolerance, debug)
 		utils.AcceptOrQuit("Write to DB ?")

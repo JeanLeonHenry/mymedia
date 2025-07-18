@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -31,11 +32,13 @@ const (
 	MediaTypePerson = "person"
 	MediaTypeTV     = "tv"
 	MediaTypeMovie  = "movie"
+	MediaTypeEmpty  = ""
 )
 
 const CrewJobDirector = "Director"
 
 var MediaTypeIcons = map[string]string{
+	MediaTypeEmpty:  "?",
 	MediaTypePerson: "",
 	MediaTypeTV:     "",
 	MediaTypeMovie:  "󰿏",
@@ -65,6 +68,9 @@ func (m Media) Dump() string {
 }
 
 func (m Media) Url() string {
+	if m.MediaType == MediaTypeEmpty {
+		return strconv.Itoa(m.ID)
+	}
 	return fmt.Sprintf(SiteBaseUrl+"/%v/%v", m.MediaType, m.ID)
 }
 
