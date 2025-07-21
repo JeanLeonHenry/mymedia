@@ -18,9 +18,8 @@ var ctx context.Context
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:     "mymedia",
-	Short:   "Build and query a media library.",
-	Version: time.Now().Format(time.DateTime),
+	Use:   "mymedia",
+	Short: "Build and query a media library.",
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
