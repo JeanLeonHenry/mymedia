@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/JeanLeonHenry/mymedia/config"
 	"github.com/JeanLeonHenry/mymedia/db"
