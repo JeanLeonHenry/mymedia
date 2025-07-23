@@ -1,4 +1,4 @@
-CREATE TABLE "media" (
+CREATE TABLE IF NOT EXISTS "media" (
 "id" integer	 primary key,
 "media_type" text not null	,
 "title"	text not null,
